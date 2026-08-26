@@ -20,13 +20,13 @@ from src.ui.about_view import AboutAndLicenseView
 from src.ui.system_tray import SystemTrayManager
 
 class MainWindow(ctk.CTk):
-    def __init__(self):
+    def __init__(self, sensor_engine=None, history_manager=None, **kwargs):
+        super().__init__(**kwargs)
         super().__init__()
         self.colors = ThemeManager.get_colors()
 
         # Window Config
         self.title("PC Thermal Guard Pro - Hardware Heat & Culprit Diagnostic Suite")
-        self.geometry("1100 EARLY_WIDTHx720")
         self.geometry("1120x740")
         self.minsize(860, 620)
 
@@ -41,8 +41,8 @@ class MainWindow(ctk.CTk):
         self.configure(fg_color=self.colors["bg_primary"])
 
         # Core Engines
-        self.sensor_engine = HardwareSensorEngine.get_instance()
-        self.history_mgr = HistoryManager()
+        self.sensor_engine = sensor_engine or HardwareSensorEngine.get_instance()
+        self.history_mgr = history_manager or HistoryManager()
         self.tray_mgr = SystemTrayManager(
             on_show_window=self.restore_from_tray,
             on_cool_down=self._on_cool_down_trigger,
