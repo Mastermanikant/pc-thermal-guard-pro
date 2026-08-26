@@ -1,0 +1,35 @@
+﻿"""
+PC Thermal Guard Pro - Entrypoint Bootstrapper
+Master Manikant Yadav Ecosystem (FrankBase System Suite)
+"""
+import os
+import sys
+
+# Add project root to sys.path
+BASE_DIR = os.path.abspath(os.path.dirname(__file__))
+if BASE_DIR not in sys.path:
+    sys.path.insert(0, BASE_DIR)
+
+import customtkinter as ctk
+from src.core.hardware_sensor import HardwareSensorEngine
+from src.core.history_manager import HistoryManager
+from src.ui.main_window import MainWindow
+
+def main():
+    # Enable High-DPI Awareness on Windows
+    try:
+        import ctypes
+        ctypes.windll.shcore.SetProcessDpiAwareness(1)
+    except Exception:
+        pass
+
+    # Initialize Core Engines
+    sensor_engine = HardwareSensorEngine()
+    history_manager = HistoryManager()
+
+    # Launch GUI Controller
+    app = MainWindow(sensor_engine=sensor_engine, history_manager=history_manager)
+    app.mainloop()
+
+if __name__ == "__main__":
+    main()
