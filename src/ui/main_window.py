@@ -1,22 +1,21 @@
 ﻿"""
-Master Application Window Controller (80-95% Matched with Smart File Organizer UI Architecture)
+Master Application Window Controller (100% Matched with FrankBase Smart File Organizer Architecture - Screenshots 2 & 3)
 PC Thermal Guard Pro
-Master Manikant Yadav Ecosystem (FrankBase Design Suite)
+Master Manikant Yadav Ecosystem
 """
 import os
 import time
 import threading
 import customtkinter as ctk
-from src.ui.theme import ThemeManager
+from src.ui.theme import ThemeManager, BG_COLOR, FRAME_BG, SIDEBAR_BG, BORDER_COLOR, NEON_CYAN, NEON_MAGENTA, TEXT_COLOR
 from src.core.hardware_sensor import HardwareSensorEngine
 from src.core.heat_attribution import HeatAttributionEngine
 from src.core.root_cause_diagnostics import RootCauseDiagnostics
 from src.core.history_manager import HistoryManager
 from src.core.thermal_relief import ThermalReliefEngine
-from src.core.machine_id import get_machine_hardware_id, copy_machine_id_to_clipboard
+from src.core.machine_id import get_machine_hardware_id
 from src.ui.top_banner_view import TopCollapsibleHeader
 from src.ui.sidebar_view import CollapsibleSidebar
-from src.ui.bottom_drawer_view import BottomCollapsibleDrawer
 from src.ui.dashboard_view import DashboardView
 from src.ui.history_view import HistoryView
 from src.ui.about_view import AboutAndLicenseView
@@ -25,14 +24,13 @@ from src.ui.system_tray import SystemTrayManager
 class MainWindow(ctk.CTk):
     def __init__(self, sensor_engine=None, history_manager=None, **kwargs):
         super().__init__(**kwargs)
-        self.colors = ThemeManager.get_colors()
 
-        # Window Configuration (High-DPI 1140x760 default)
-        self.title("PC Thermal Guard Pro - Hardware Heat & Culprit Diagnostic Suite")
-        self.geometry("1140x760")
-        self.minsize(880, 640)
+        # Window Configuration (High-DPI 1160x780 matching Smart File Organizer)
+        self.title("FrankBase - PC Thermal Guard Pro")
+        self.geometry("1160x780")
+        self.minsize(920, 680)
 
-        # Set Application Window Icon
+        # Set Window Icon
         icon_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "assets", "app_icon.ico"))
         if os.path.exists(icon_path):
             try:
@@ -40,7 +38,7 @@ class MainWindow(ctk.CTk):
             except Exception:
                 pass
 
-        self.configure(fg_color=self.colors["bg_primary"])
+        self.configure(fg_color=BG_COLOR)
 
         # Core Engines
         self.sensor_engine = sensor_engine or HardwareSensorEngine.get_instance()
@@ -64,13 +62,12 @@ class MainWindow(ctk.CTk):
 
     def _build_layout(self):
         # Master Grid Layout:
-        # Row 0: Top Collapsible Header & AI Quick-Tools Banner
-        # Row 1: Middle Workspace (Col 0: Collapsible Sidebar, Col 1: Center Viewport)
-        # Row 2: Bottom Collapsible Telemetry & AI Prompt Drawer
+        # Row 0: Top Header
+        # Row 1: Workspace (Col 0: Sidebar, Col 1: Center Viewport)
         self.grid_rowconfigure(1, weight=1)
         self.grid_columnconfigure(1, weight=1)
 
-        # ── 1. Top Collapsible Header (Row 0) ──
+        # ── 1. Top Header (Row 0, Column 0-1) ──
         self.top_header = TopCollapsibleHeader(
             self,
             on_toggle_theme_callback=self._on_toggle_theme,
@@ -79,7 +76,7 @@ class MainWindow(ctk.CTk):
         )
         self.top_header.grid(row=0, column=0, columnspan=2, sticky="ew")
 
-        # ── 2. Left Collapsible Sidebar (Row 1, Column 0) ──
+        # ── 2. Left Sidebar (Row 1, Column 0) ──
         self.sidebar = CollapsibleSidebar(
             self,
             on_navigate_callback=self._switch_view
@@ -88,11 +85,11 @@ class MainWindow(ctk.CTk):
 
         # ── 3. Center Dynamic Viewport (Row 1, Column 1) ──
         self.content_container = ctk.CTkFrame(self, fg_color="transparent")
-        self.content_container.grid(row=1, column=1, sticky="nsew", padx=6, pady=4)
+        self.content_container.grid(row=1, column=1, sticky="nsew", padx=10, pady=10)
         self.content_container.grid_rowconfigure(0, weight=1)
         self.content_container.grid_columnconfigure(0, weight=1)
 
-        # Instantiate Sub-Views
+        # Instantiate Views
         self.view_dashboard = DashboardView(
             self.content_container,
             on_toast=lambda title, msg: self.show_toast(f"⚡ {title}: {msg}"),
@@ -116,14 +113,6 @@ class MainWindow(ctk.CTk):
         # Show initial dashboard view
         self._switch_view("Dashboard")
 
-        # ── 4. Bottom Collapsible Telemetry & Prompt Drawer (Row 2) ──
-        self.bottom_drawer = BottomCollapsibleDrawer(
-            self,
-            on_cool_down_callback=self._on_master_cool_down_trigger,
-            on_toast_callback=self.show_toast
-        )
-        self.bottom_drawer.grid(row=2, column=0, columnspan=2, sticky="ew")
-
     def _switch_view(self, key: str):
         self.active_view_key = key
         for k, v in self.views.items():
@@ -136,20 +125,19 @@ class MainWindow(ctk.CTk):
 
     def _on_toggle_theme(self):
         new_theme = ThemeManager.toggle_theme()
-        self.colors = ThemeManager.get_colors()
+        is_dark = new_theme == "dark"
 
-        # Update Master Window & Components
-        self.configure(fg_color=self.colors["bg_primary"])
+        # Update Master Window & Views
+        self.configure(fg_color=BG_COLOR)
         self.top_header.refresh_theme()
         self.sidebar.refresh_theme()
-        self.bottom_drawer.refresh_theme()
 
         if hasattr(self.view_dashboard, "apply_theme"):
             self.view_dashboard.apply_theme()
         if hasattr(self.view_history, "refresh_theme"):
             self.view_history.refresh_theme()
 
-        self.show_toast(f"🎨 Switched to {'Night' if new_theme == 'dark' else 'Day'} Mode (WCAG 2.1 AA)")
+        self.show_toast(f"🎨 Switched to {'Night Mode 🌙' if is_dark else 'Day Mode ☀️'}")
 
     def _on_master_cool_down_trigger(self):
         """Executes Smart Foreground-Safe 1-Click Cool Down."""
@@ -157,14 +145,14 @@ class MainWindow(ctk.CTk):
         result = ThermalReliefEngine.one_click_cool_down(culprits)
         self.show_toast(result.get("message", "Cool Down Triggered"))
 
-    def show_toast(self, message: str, duration_sec: float = 3.5):
-        """Non-blocking floating toast notification (Glassmorphic style)."""
+    def show_toast(self, message: str, duration_sec: float = 3.0):
+        """Non-blocking floating toast notification (Vibrant Cyan/Magenta border)."""
         toast = ctk.CTkFrame(
             self,
-            fg_color=self.colors["toast_bg"],
+            fg_color="#003344",
             corner_radius=8,
             border_width=1,
-            border_color=self.colors["border_active"]
+            border_color=NEON_CYAN
         )
         lbl = ctk.CTkLabel(
             toast,
@@ -173,7 +161,7 @@ class MainWindow(ctk.CTk):
             text_color="#ffffff"
         )
         lbl.pack(padx=16, pady=8)
-        toast.place(relx=0.5, rely=0.07, anchor="center")
+        toast.place(relx=0.5, rely=0.08, anchor="center")
 
         def _remove():
             time.sleep(duration_sec)
@@ -211,18 +199,6 @@ class MainWindow(ctk.CTk):
         threading.Thread(target=_poll, daemon=True).start()
 
     def _update_gui(self, telemetry, culprits, diagnostics):
-        cpu_t = telemetry.get("cpu_package_temp") or telemetry.get("cpu_temp") or 45.0
-        status_name = diagnostics.get("status", "OPTIMAL")
-
-        # Update Top Header live temperature chip
-        self.top_header.update_live_temp(cpu_t, status_name)
-
-        # Update Sidebar RAM progress bar
-        self.sidebar.update_resource_bars()
-
-        # Update Bottom Drawer streaming line
-        self.bottom_drawer.append_telemetry_line(telemetry, culprits)
-
         # Update Active Center Views
         if self.view_dashboard.winfo_ismapped():
             self.view_dashboard.update_telemetry(telemetry, culprits, diagnostics)
@@ -232,7 +208,7 @@ class MainWindow(ctk.CTk):
     def minimize_to_tray(self):
         self.withdraw()
         self.tray_mgr.show_notification(
-            "PC Thermal Guard Pro",
+            "FrankBase PC Thermal Guard Pro",
             "Running in background. Double-click tray icon to open."
         )
 

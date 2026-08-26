@@ -1,13 +1,14 @@
 ﻿"""
-Top Collapsible Header & AI Quick-Tools Banner (Shrink/Expand)
+Header Component (100% Matched with FrankBase Smart File Organizer Header - Screenshots 2 & 3)
 PC Thermal Guard Pro
-Master Manikant Yadav Ecosystem (FrankBase Design Suite)
+Master Manikant Yadav Ecosystem
 """
 import customtkinter as ctk
 import webbrowser
 from typing import Callable
-from src.ui.theme import ThemeManager
+from src.ui.theme import ThemeManager, NEON_CYAN, NEON_MAGENTA, NEON_GREEN, BG_COLOR, FRAME_BG, BORDER_COLOR, TEXT_COLOR, DYNAMIC_GRAY
 from src.core.machine_id import get_machine_hardware_id, copy_machine_id_to_clipboard
+from src.ui.custom_dialog import show_custom_dialog
 
 class TopCollapsibleHeader(ctk.CTkFrame):
     def __init__(
@@ -18,236 +19,178 @@ class TopCollapsibleHeader(ctk.CTkFrame):
         on_toast_callback: Callable[[str], None] = None,
         **kwargs
     ):
-        self.colors = ThemeManager.get_colors()
         super().__init__(
             parent,
-            fg_color=self.colors["card_bg"],
+            fg_color=FRAME_BG,
             corner_radius=0,
             border_width=1,
-            border_color=self.colors["border_color"],
+            border_color=BORDER_COLOR,
             **kwargs
         )
         self.on_toggle_theme = on_toggle_theme_callback
         self.on_minimize_tray = on_minimize_tray_callback
         self.toast = on_toast_callback
         self.hwid = get_machine_hardware_id()
-        self.is_expanded = False
+        self.user_persona_var = ctk.StringVar(value="Normal")
 
         self._build_ui()
 
     def _build_ui(self):
-        # ── Primary Top Row (Always Visible) ──
-        self.row_main = ctk.CTkFrame(self, fg_color="transparent", height=48)
-        self.row_main.pack(fill="x", padx=12, pady=6)
+        self.header_inner = ctk.CTkFrame(self, fg_color="transparent", height=52)
+        self.header_inner.pack(fill="x", padx=15, pady=8)
 
-        # 1. Left: Brand & Glowing Flame Shield
-        self.lbl_logo = ctk.CTkLabel(
-            self.row_main,
-            text="⚡ PC THERMAL GUARD PRO",
-            font=ctk.CTkFont(size=15, weight="bold"),
-            text_color=self.colors["accent_cyan"]
+        # 1. Left Brand: FRANKBASE (Neon Cyan) + PC Thermal Guard Pro (White)
+        brand_box = ctk.CTkFrame(self.header_inner, fg_color="transparent")
+        brand_box.pack(side="left", padx=(0, 15))
+
+        self.lbl_brand_main = ctk.CTkLabel(
+            brand_box,
+            text="FRANKBASE",
+            font=ctk.CTkFont(size=18, weight="bold"),
+            text_color=NEON_CYAN
         )
-        self.lbl_logo.pack(side="left", padx=(4, 10))
+        self.lbl_brand_main.pack(anchor="w")
 
-        # 2. PC Hardware ID ("PC Number") 1-Click Copy Pill
-        self.btn_hwid = ctk.CTkButton(
-            self.row_main,
-            text=f"PC ID: {self.hwid} 📋",
-            height=28,
-            corner_radius=6,
-            fg_color=self.colors["input_bg"],
-            text_color=self.colors["text_primary"],
-            hover_color=self.colors["accent_blue"],
-            border_width=1,
-            border_color=self.colors["border_color"],
-            font=ctk.CTkFont(family="Consolas", size=11, weight="bold"),
-            command=self._on_copy_hwid
-        )
-        self.btn_hwid.pack(side="left", padx=6)
-
-        # 3. Live Thermal Chip
-        self.chip_temp = ctk.CTkLabel(
-            self.row_main,
-            text="🌡️ 45.0°C | OPTIMAL",
-            height=28,
-            corner_radius=6,
-            fg_color=self.colors["input_bg"],
-            text_color=self.colors["status_optimal"],
+        self.lbl_brand_sub = ctk.CTkLabel(
+            brand_box,
+            text="PC Thermal Guard Pro",
             font=ctk.CTkFont(size=11, weight="bold"),
-            padx=10
+            text_color=TEXT_COLOR
         )
-        self.chip_temp.pack(side="left", padx=6)
+        self.lbl_brand_sub.pack(anchor="w")
 
-        # 4. Right Controls: Tray, Theme, Expand Tools Button
+        # 2. Plan Badge (Magenta Pill matching Screenshot 2)
+        self.btn_plan_badge = ctk.CTkButton(
+            self.header_inner,
+            text="🛡️ Community Edition - Free",
+            height=30,
+            corner_radius=6,
+            fg_color=NEON_MAGENTA,
+            hover_color="#c00060",
+            text_color="white",
+            font=ctk.CTkFont(size=11, weight="bold"),
+            command=self._on_plan_click
+        )
+        self.btn_plan_badge.pack(side="left", padx=8)
+
+        # 3. Persona Switch (Normal User / Gamer Turbo Mode)
+        self.persona_frame = ctk.CTkFrame(self.header_inner, fg_color=BG_COLOR, corner_radius=20, border_width=1, border_color=BORDER_COLOR)
+        self.persona_frame.pack(side="left", padx=8)
+
+        self.sw_persona = ctk.CTkSwitch(
+            self.persona_frame,
+            text="👤 Normal User",
+            font=ctk.CTkFont(size=11, weight="bold"),
+            variable=self.user_persona_var,
+            onvalue="Turbo",
+            offvalue="Normal",
+            progress_color=NEON_CYAN,
+            command=self._on_persona_toggled
+        )
+        self.sw_persona.pack(padx=10, pady=4)
+
+        # 4. Privacy Friendly Badge (Green Pill matching Screenshot 2)
+        self.btn_privacy = ctk.CTkButton(
+            self.header_inner,
+            text="🛡️ 100% Offline & Privacy Friendly (learn more ↗)",
+            height=28,
+            corner_radius=20,
+            fg_color="#003311",
+            text_color=NEON_GREEN,
+            hover_color="#004419",
+            border_width=1,
+            border_color=NEON_GREEN,
+            font=ctk.CTkFont(size=10, weight="bold"),
+            command=self._show_privacy_modal
+        )
+        self.btn_privacy.pack(side="left", padx=8)
+
+        # 5. Right Controls: Theme Switch & System Tray
         self.btn_tray = ctk.CTkButton(
-            self.row_main,
+            self.header_inner,
             text="📥 Tray",
-            width=70,
+            width=65,
             height=28,
             corner_radius=6,
-            fg_color=self.colors["input_bg"],
-            text_color=self.colors["text_secondary"],
-            hover_color=self.colors["accent_blue"],
+            fg_color=BG_COLOR,
+            text_color=TEXT_COLOR,
+            hover_color=NEON_CYAN,
             font=ctk.CTkFont(size=11),
             command=self.on_minimize_tray
         )
-        self.btn_tray.pack(side="right", padx=(4, 4))
+        self.btn_tray.pack(side="right", padx=(4, 0))
 
-        self.btn_theme = ctk.CTkButton(
-            self.row_main,
-            text="🌙 Night" if ThemeManager.get_current_theme() == "dark" else "☀️ Day",
-            width=76,
-            height=28,
-            corner_radius=6,
-            fg_color=self.colors["input_bg"],
-            text_color=self.colors["text_primary"],
-            hover_color=self.colors["accent_cyan"],
+        # Day/Night Mode Switch (Matching Screenshot 2/3)
+        self.theme_box = ctk.CTkFrame(self.header_inner, fg_color=BG_COLOR, corner_radius=20, border_width=1, border_color=BORDER_COLOR)
+        self.theme_box.pack(side="right", padx=6)
+
+        self.theme_switch_var = ctk.StringVar(value="Night" if ThemeManager.get_current_theme() == "dark" else "Day")
+        self.sw_theme = ctk.CTkSwitch(
+            self.theme_box,
+            text="🌙 Night Mode" if ThemeManager.get_current_theme() == "dark" else "☀️ Day Mode",
             font=ctk.CTkFont(size=11, weight="bold"),
-            command=self.on_toggle_theme
+            variable=self.theme_switch_var,
+            onvalue="Night",
+            offvalue="Day",
+            progress_color=NEON_CYAN,
+            command=self._on_theme_switch_clicked
         )
-        self.btn_theme.pack(side="right", padx=4)
+        self.sw_theme.pack(padx=10, pady=4)
 
-        # Top Drawer Toggle (Shrink/Expand Button)
-        self.btn_tools_toggle = ctk.CTkButton(
-            self.row_main,
-            text="▼ AI & Search Tools",
-            width=140,
-            height=28,
-            corner_radius=6,
-            fg_color=self.colors["accent_blue"],
-            text_color="#ffffff",
-            hover_color=self.colors["accent_cyan"],
-            font=ctk.CTkFont(size=11, weight="bold"),
-            command=self.toggle_expand
-        )
-        self.btn_tools_toggle.pack(side="right", padx=6)
-
-        # ── Collapsible Expandable Tools Panel (Hidden by Default) ──
-        self.panel_expanded = ctk.CTkFrame(
-            self,
-            fg_color=self.colors["bg_secondary"],
-            corner_radius=0,
-            border_width=1,
-            border_color=self.colors["border_color"]
-        )
-
-        # Build 2-Column AI & Search Quick Grid (Matching Smart File Organizer)
-        self._build_expanded_tools()
-
-    def _build_expanded_tools(self):
-        col_container = ctk.CTkFrame(self.panel_expanded, fg_color="transparent")
-        col_container.pack(fill="x", padx=12, pady=10)
-
-        # Left Column: Web Search Engines
-        col_left = ctk.CTkFrame(col_container, fg_color=self.colors["card_bg"], corner_radius=8, border_width=1, border_color=self.colors["border_color"])
-        col_left.pack(side="left", fill="both", expand=True, padx=(0, 6))
-
-        ctk.CTkLabel(
-            col_left,
-            text="🔎 Web Research & Diagnostics (6 Engines)",
-            font=ctk.CTkFont(size=11, weight="bold"),
-            text_color=self.colors["text_secondary"]
-        ).pack(anchor="w", padx=10, pady=(6, 4))
-
-        google_url = "https://www.google.com/search?q=PC+Thermal+Guard+Pro+MasterManikant+frankbase.com+hardware+cooling"
-        google_ai_url = "https://www.google.com/search?q=how+to+reduce+cpu+thermal+throttling+frankbase.com&udm=50"
-        bing_url = "https://www.bing.com/search?q=PC+Thermal+Guard+Pro+MasterManikant"
-        ddg_url = "https://duckduckgo.com/?q=CPU+overheating+hardware+diagnostics+frankbase"
-        brave_url = "https://search.brave.com/search?q=PC+Thermal+Guard+Pro+MasterManikant"
-        store_url = "https://store.frankbase.com"
-
-        r1 = ctk.CTkFrame(col_left, fg_color="transparent")
-        r1.pack(fill="x", padx=8, pady=2)
-        ctk.CTkButton(r1, text="🌐 Google", height=24, fg_color="#bf360c", hover_color="#9c2d0a", font=ctk.CTkFont(size=10, weight="bold"), corner_radius=4, command=lambda: webbrowser.open(google_url)).pack(side="left", expand=True, fill="x", padx=2)
-        ctk.CTkButton(r1, text="🔮 Google AI", height=24, fg_color="#880e4f", hover_color="#6a0039", font=ctk.CTkFont(size=10, weight="bold"), corner_radius=4, command=lambda: webbrowser.open(google_ai_url)).pack(side="left", expand=True, fill="x", padx=2)
-
-        r2 = ctk.CTkFrame(col_left, fg_color="transparent")
-        r2.pack(fill="x", padx=8, pady=2)
-        ctk.CTkButton(r2, text="🔍 Bing", height=24, fg_color="#006064", hover_color="#00474a", font=ctk.CTkFont(size=10, weight="bold"), corner_radius=4, command=lambda: webbrowser.open(bing_url)).pack(side="left", expand=True, fill="x", padx=2)
-        ctk.CTkButton(r2, text="🦆 DuckDuckGo", height=24, fg_color="#5d4037", hover_color="#4a2e24", font=ctk.CTkFont(size=10, weight="bold"), corner_radius=4, command=lambda: webbrowser.open(ddg_url)).pack(side="left", expand=True, fill="x", padx=2)
-
-        r3 = ctk.CTkFrame(col_left, fg_color="transparent")
-        r3.pack(fill="x", padx=8, pady=(2, 8))
-        ctk.CTkButton(r3, text="🦁 Brave", height=24, fg_color="#7b341e", hover_color="#5c2613", font=ctk.CTkFont(size=10, weight="bold"), corner_radius=4, command=lambda: webbrowser.open(brave_url)).pack(side="left", expand=True, fill="x", padx=2)
-        ctk.CTkButton(r3, text="🛍️ FrankBase Store", height=24, fg_color=self.colors["accent_blue"], hover_color=self.colors["accent_cyan"], font=ctk.CTkFont(size=10, weight="bold"), corner_radius=4, command=lambda: webbrowser.open(store_url)).pack(side="left", expand=True, fill="x", padx=2)
-
-        # Right Column: AI Assistant Launchers
-        col_right = ctk.CTkFrame(col_container, fg_color=self.colors["card_bg"], corner_radius=8, border_width=1, border_color=self.colors["border_color"])
-        col_right.pack(side="left", fill="both", expand=True, padx=(6, 0))
-
-        ctk.CTkLabel(
-            col_right,
-            text="🤖 AI Diagnostic Launchers (Instant Query)",
-            font=ctk.CTkFont(size=11, weight="bold"),
-            text_color=self.colors["text_secondary"]
-        ).pack(anchor="w", padx=10, pady=(6, 4))
-
-        ar1 = ctk.CTkFrame(col_right, fg_color="transparent")
-        ar1.pack(fill="x", padx=8, pady=2)
-        ctk.CTkButton(ar1, text="🤖 ChatGPT", height=24, fg_color="#0e8c6d", hover_color="#0a6e55", font=ctk.CTkFont(size=10, weight="bold"), corner_radius=4, command=lambda: webbrowser.open("https://chatgpt.com")).pack(side="left", expand=True, fill="x", padx=2)
-        ctk.CTkButton(ar1, text="✨ Gemini", height=24, fg_color="#1a4fa8", hover_color="#123c85", font=ctk.CTkFont(size=10, weight="bold"), corner_radius=4, command=lambda: webbrowser.open("https://gemini.google.com")).pack(side="left", expand=True, fill="x", padx=2)
-
-        ar2 = ctk.CTkFrame(col_right, fg_color="transparent")
-        ar2.pack(fill="x", padx=8, pady=2)
-        ctk.CTkButton(ar2, text="🧠 Claude", height=24, fg_color="#7c4a00", hover_color="#5e3800", font=ctk.CTkFont(size=10, weight="bold"), corner_radius=4, command=lambda: webbrowser.open("https://claude.ai")).pack(side="left", expand=True, fill="x", padx=2)
-        ctk.CTkButton(ar2, text="🔍 Perplexity", height=24, fg_color="#0e6b7a", hover_color="#0a5260", font=ctk.CTkFont(size=10, weight="bold"), corner_radius=4, command=lambda: webbrowser.open("https://www.perplexity.ai")).pack(side="left", expand=True, fill="x", padx=2)
-
-        ar3 = ctk.CTkFrame(col_right, fg_color="transparent")
-        ar3.pack(fill="x", padx=8, pady=(2, 8))
-        ctk.CTkButton(ar3, text="🤝 Copilot", height=24, fg_color="#0050a0", hover_color="#003d7a", font=ctk.CTkFont(size=10, weight="bold"), corner_radius=4, command=lambda: webbrowser.open("https://copilot.microsoft.com")).pack(side="left", expand=True, fill="x", padx=2)
-        ctk.CTkButton(ar3, text="🐋 DeepSeek", height=24, fg_color="#004d5e", hover_color="#003844", font=ctk.CTkFont(size=10, weight="bold"), corner_radius=4, command=lambda: webbrowser.open("https://chat.deepseek.com")).pack(side="left", expand=True, fill="x", padx=2)
-
-    def toggle_expand(self):
-        self.is_expanded = not self.is_expanded
-        if self.is_expanded:
-            self.btn_tools_toggle.configure(text="▲ Hide AI Tools")
-            self.panel_expanded.pack(fill="x", padx=0, pady=0)
+    def _on_persona_toggled(self):
+        val = self.user_persona_var.get()
+        if val == "Turbo":
+            self.sw_persona.configure(text="⚡ Power Gamer (Turbo)")
+            msg = (
+                "Power Gamer Mode Activated!\n\n"
+                "• Aggressive Background Heat Throttling Enabled.\n"
+                "• Real-time 0.5s ultra-fast sensor polling.\n"
+                "• All heavy background tasks will be automatically parked on E-Cores during gaming.\n\n"
+                "Need more details? Visit frankbase.com/pcthermalguard"
+            )
+            show_custom_dialog(self.winfo_toplevel(), "Gamer Turbo Mode Active", msg, icon="⚡", link_url="https://mastermanikant.com")
         else:
-            self.btn_tools_toggle.configure(text="▼ AI & Search Tools")
-            self.panel_expanded.pack_forget()
+            self.sw_persona.configure(text="👤 Normal User")
+            msg = (
+                "Normal User Mode Activated!\n\n"
+                "• Standard Balanced Cooling Profile.\n"
+                "• Low-overhead asynchronous telemetry (<18MB RAM).\n"
+                "• Protected Active Window: Your active work will never be interrupted.\n\n"
+                "System Protection Guaranteed: Windows system kernel remains protected."
+            )
+            show_custom_dialog(self.winfo_toplevel(), "Normal User Mode Active", msg, icon="👤", link_url="https://mastermanikant.com")
 
-    def update_live_temp(self, temp: float, status: str):
-        color = self.colors["status_optimal"]
-        if temp >= 80.0:
-            color = self.colors["status_critical"]
-        elif temp >= 65.0:
-            color = self.colors["status_elevated"]
-
-        self.chip_temp.configure(
-            text=f"🌡️ {temp:.1f}°C | {status.upper()}",
-            text_color=color
+    def _show_privacy_modal(self):
+        msg = (
+            "100% Offline & Privacy Friendly Architecture!\n\n"
+            "• Zero Cloud Telemetry: PC Thermal Guard Pro does not send any hardware telemetry or process logs over the internet.\n\n"
+            "• Zero Ads & Zero Tracking: 100% private, local-first engineering.\n\n"
+            "• Offline RSA-2048 Licensing: Pro features are verified completely offline on your PC without third-party server pings.\n\n"
+            "Developed by Master Manikant Yadav | FrankBase Ecosystem."
         )
+        show_custom_dialog(self.winfo_toplevel(), "Privacy Guarantee", msg, icon="🛡️", link_url="https://mastermanikant.com/privacy")
 
-    def _on_copy_hwid(self):
-        copy_machine_id_to_clipboard()
-        if self.toast:
-            self.toast(f"📋 PC ID ({self.hwid}) copied to clipboard!")
+    def _on_plan_click(self):
+        msg = (
+            "Pro Lifetime License Upgrade!\n\n"
+            "• Auto-Sentry Background Silent Cooling.\n"
+            "• 30-Day SQLite Deep Historical Heat Ledger.\n"
+            "• Exportable Hardware Health Reports (PDF/CSV).\n"
+            "• AI Voice Alerts (Edge-TTS).\n\n"
+            "Upgrade for only ₹299 INR / $9.99 USD One-Time Lifetime!"
+        )
+        show_custom_dialog(self.winfo_toplevel(), "Upgrade to Pro", msg, icon="⭐", link_url="https://store.frankbase.com")
+
+    def _on_theme_switch_clicked(self):
+        self.on_toggle_theme()
+        is_dark = ThemeManager.get_current_theme() == "dark"
+        self.sw_theme.configure(text="🌙 Night Mode" if is_dark else "☀️ Day Mode")
 
     def refresh_theme(self):
-        self.colors = ThemeManager.get_colors()
-        self.configure(fg_color=self.colors["card_bg"], border_color=self.colors["border_color"])
-        self.row_main.configure(fg_color="transparent")
-        self.lbl_logo.configure(text_color=self.colors["accent_cyan"])
-        self.btn_hwid.configure(
-            fg_color=self.colors["input_bg"],
-            text_color=self.colors["text_primary"],
-            border_color=self.colors["border_color"]
-        )
-        self.chip_temp.configure(fg_color=self.colors["input_bg"])
-        self.btn_tray.configure(
-            fg_color=self.colors["input_bg"],
-            text_color=self.colors["text_secondary"]
-        )
-        self.btn_theme.configure(
-            text="🌙 Night" if ThemeManager.get_current_theme() == "dark" else "☀️ Day",
-            fg_color=self.colors["input_bg"],
-            text_color=self.colors["text_primary"]
-        )
-        self.btn_tools_toggle.configure(
-            fg_color=self.colors["accent_blue"],
-            hover_color=self.colors["accent_cyan"]
-        )
-        self.panel_expanded.configure(
-            fg_color=self.colors["bg_secondary"],
-            border_color=self.colors["border_color"]
-        )
+        is_dark = ThemeManager.get_current_theme() == "dark"
+        self.configure(fg_color=FRAME_BG, border_color=BORDER_COLOR)
+        self.lbl_brand_main.configure(text_color=NEON_CYAN)
+        self.lbl_brand_sub.configure(text_color=TEXT_COLOR)
+        self.persona_frame.configure(fg_color=BG_COLOR, border_color=BORDER_COLOR)
+        self.theme_box.configure(fg_color=BG_COLOR, border_color=BORDER_COLOR)
+        self.sw_theme.configure(text="🌙 Night Mode" if is_dark else "☀️ Day Mode")
