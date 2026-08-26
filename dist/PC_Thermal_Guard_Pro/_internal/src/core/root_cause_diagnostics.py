@@ -14,7 +14,7 @@ from typing import Dict, Any, List
 class ThermalDiagnosticEngine:
     @staticmethod
     def evaluate_diagnostics(telemetry: Dict[str, Any], culprits: List[Dict[str, Any]]) -> Dict[str, Any]:
-        cpu_temp = telemetry.get('cpu_temp', 45.0)
+        cpu_temp = telemetry.get('cpu_package_temp') or telemetry.get('cpu_temp') or 45.0
         cpu_load = telemetry.get('cpu_load', 0.0)
         fan_rpm = telemetry.get('fan_rpm', 1200)
         is_throttling = telemetry.get('is_throttling', False)
@@ -93,3 +93,9 @@ class ThermalDiagnosticEngine:
             'recommendation': 'No action required. Thermal Guard is actively monitoring in low-overhead mode.',
             'severity_score': 10
         }
+
+    # Alias for convenience
+    diagnose = evaluate_diagnostics
+
+# Backward compatible alias
+RootCauseDiagnostics = ThermalDiagnosticEngine

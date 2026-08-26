@@ -13,9 +13,10 @@ from src.ui.theme import ThemeManager
 from src.core.thermal_relief import ThermalReliefEngine
 
 class DashboardView(ctk.CTkFrame):
-    def __init__(self, master, on_toast: Callable[[str, str], None] = None, **kwargs):
+    def __init__(self, master, on_toast: Callable[[str, str], None] = None, on_cool_down_callback: Callable[[], None] = None, **kwargs):
         super().__init__(master, fg_color="transparent", **kwargs)
         self.on_toast = on_toast
+        self.on_cool_down_callback = on_cool_down_callback
         self.top_culprits_cache: List[Dict[str, Any]] = []
         
         self._build_ui()

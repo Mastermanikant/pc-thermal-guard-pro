@@ -208,3 +208,19 @@ class HardwareSensorEngine:
     def get_current_telemetry(self) -> Dict[str, Any]:
         with self._lock:
             return dict(self._last_telemetry)
+    _instance = None
+
+    @classmethod
+    def get_instance(cls, lib_dir=None):
+        if cls._instance is None:
+            cls._instance = cls(lib_dir=lib_dir)
+        return cls._instance
+
+    @property
+    def driver_mode(self) -> str:
+        if self.lhm_initialized:
+            return 'LibreHardwareMonitor (Ring-0 MSR / Admin)'
+        return 'Adaptive Telemetry Model (User Mode)'
+
+    def get_telemetry(self) -> Dict[str, Any]:
+        return self.get_current_telemetry()
