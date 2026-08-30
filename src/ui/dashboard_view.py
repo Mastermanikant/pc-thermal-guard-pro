@@ -7,6 +7,7 @@ import customtkinter as ctk
 from typing import Dict, Any, List, Callable
 from src.ui.theme import ThemeManager, NEON_CYAN, NEON_MAGENTA, NEON_GREEN, BG_COLOR, FRAME_BG, BORDER_COLOR, TEXT_COLOR, DYNAMIC_GRAY
 from src.core.thermal_relief import ThermalReliefEngine
+from src.core.hardware_sensor import restart_as_admin, is_admin
 from src.ui.ecosystem_card import EcosystemBannerCard
 
 class DashboardView(ctk.CTkScrollableFrame):
@@ -24,11 +25,12 @@ class DashboardView(ctk.CTkScrollableFrame):
         self.top_culprits_cache: List[Dict[str, Any]] = []
         self.stats_expanded = True
         self.culprit_rows = []
+        self.is_elevated = is_admin()
 
         self._build_ui()
 
     def _build_ui(self):
-        # ── 1. Top Section: Global Thermal Stats & Preview (Expandable Card matching Screenshots 2 & 3) ──
+        # ── 1. Top Section: Global Thermal Stats & Preview ──
         self.stats_card = ctk.CTkFrame(self, fg_color=FRAME_BG, corner_radius=8, border_width=1, border_color=BORDER_COLOR)
         self.stats_card.pack(fill="x", padx=10, pady=(10, 8))
 
@@ -43,18 +45,28 @@ class DashboardView(ctk.CTkScrollableFrame):
             text_color=TEXT_COLOR
         ).pack(side="left")
 
-        self.btn_update_telemetry = ctk.CTkButton(
-            stats_hdr,
-            text="🔄 Live Active",
-            width=100,
-            height=26,
-            corner_radius=6,
-            fg_color=NEON_CYAN,
-            text_color="black",
-            hover_color=NEON_MAGENTA,
-            font=ctk.CTkFont(size=11, weight="bold")
-        )
-        self.btn_update_telemetry.pack(side="right", padx=(6, 0))
+        # Admin Elevation / Sensor Status Badge
+        if not self.is_elevated:
+            self.btn_admin_badge = ctk.CTkButton(
+                stats_hdr,
+                text="🛡️ Run as Admin (Direct Sensor Probe)",
+                height=26,
+                corner_radius=6,
+                fg_color="#880e4f",
+                hover_color=NEON_MAGENTA,
+                text_color="white",
+                font=ctk.CTkFont(size=10, weight="bold"),
+                command=self._on_elevate_admin
+            )
+            self.btn_admin_badge.pack(side="right", padx=(6, 0))
+        else:
+            self.btn_admin_badge = ctk.CTkLabel(
+                stats_hdr,
+                text="⚡ Ring-0 Silicon Direct",
+                font=ctk.CTkFont(size=10, weight="bold"),
+                text_color=NEON_GREEN
+            )
+            self.btn_admin_badge.pack(side="right", padx=(6, 0))
 
         self.btn_toggle_stats = ctk.CTkButton(
             stats_hdr,
@@ -68,7 +80,7 @@ class DashboardView(ctk.CTkScrollableFrame):
             font=ctk.CTkFont(size=11, weight="bold"),
             command=self.toggle_stats_view
         )
-        self.btn_toggle_stats.pack(side="right")
+        self.btn_toggle_stats.pack(side="right", padx=(6, 0))
 
         # Stats Content Container (Collapsible)
         self.stats_content = ctk.CTkFrame(self.stats_card, fg_color="transparent")
@@ -79,12 +91,12 @@ class DashboardView(ctk.CTkScrollableFrame):
         self.gauges_frame.pack(fill="x", pady=(2, 10))
         self.gauges_frame.grid_columnconfigure((0, 1, 2, 3), weight=1, uniform="metric")
 
-        self.card_cpu = self._create_metric_card(self.gauges_frame, 0, "CPU TEMPERATURE", "45.0°C", "Peak: 48.0°C", NEON_GREEN)
-        self.card_gpu = self._create_metric_card(self.gauges_frame, 1, "GPU TEMPERATURE", "42.0°C", "Load: 0%", NEON_CYAN)
-        self.card_fan = self._create_metric_card(self.gauges_frame, 2, "COOLING FAN", "1200 RPM", "Auto Speed", NEON_CYAN)
-        self.card_power = self._create_metric_card(self.gauges_frame, 3, "CPU POWER & CLOCK", "15.0 W", "2400 MHz", DYNAMIC_GRAY)
+        self.card_cpu = self._create_metric_card(self.gauges_frame, 0, "CPU TEMPERATURE", "24.0°C", "Peak: 26.0°C", NEON_GREEN)
+        self.card_gpu = self._create_metric_card(self.gauges_frame, 1, "GPU TEMPERATURE", "22.0°C", "Load: 0%", NEON_CYAN)
+        self.card_fan = self._create_metric_card(self.gauges_frame, 2, "COOLING FAN", "0 RPM (Silent)", "Fan Stopped", NEON_CYAN)
+        self.card_power = self._create_metric_card(self.gauges_frame, 3, "CPU POWER & CLOCK", "8.0 W", "2400 MHz", DYNAMIC_GRAY)
 
-        # ── 2. Diagnostic Hero Card (Matching Screenshot 1 & 2) ──
+        # ── 2. Diagnostic Hero Card ──
         self.hero_diag = ctk.CTkFrame(self.stats_content, fg_color=BG_COLOR, corner_radius=8, border_width=1, border_color=BORDER_COLOR)
         self.hero_diag.pack(fill="x", pady=(0, 4))
 
@@ -111,7 +123,7 @@ class DashboardView(ctk.CTkScrollableFrame):
         )
         self.lbl_diag_title.pack(side="left", padx=10)
 
-        # Master Magenta 1-Click Cool Down Button (Screenshots 1 & 2)
+        # Master Magenta 1-Click Cool Down Button
         self.btn_master_cool = ctk.CTkButton(
             diag_hdr,
             text="⚡ 1-Click Cool Down",
@@ -127,7 +139,7 @@ class DashboardView(ctk.CTkScrollableFrame):
 
         self.lbl_diag_desc = ctk.CTkLabel(
             self.hero_diag,
-            text="CPU temperature is at a safe 45°C. Cooling system is running smoothly with low background load.",
+            text="CPU temperature is cool. Cooling system is running smoothly with low background load.",
             font=ctk.CTkFont(size=12),
             text_color=TEXT_COLOR,
             wraplength=700,
@@ -176,7 +188,7 @@ class DashboardView(ctk.CTkScrollableFrame):
             row = self._create_culprit_row(self.rows_container, i)
             self.culprit_rows.append(row)
 
-        # ── 4. Bottom Section: Ecosystem Banner Card (100% Matched with Screenshots 2 & 3) ──
+        # ── 4. Bottom Section: Ecosystem Banner Card ──
         self.ecosystem_banner = EcosystemBannerCard(self, on_toast_callback=self.on_toast)
         self.ecosystem_banner.pack(fill="x", padx=10, pady=(8, 15))
 
@@ -187,7 +199,7 @@ class DashboardView(ctk.CTkScrollableFrame):
         lbl_t = ctk.CTkLabel(card, text=title, font=ctk.CTkFont(size=10, weight="bold"), text_color=DYNAMIC_GRAY)
         lbl_t.pack(anchor="w", padx=10, pady=(8, 2))
 
-        lbl_v = ctk.CTkLabel(card, text=value, font=ctk.CTkFont(size=22, weight="bold"), text_color=color)
+        lbl_v = ctk.CTkLabel(card, text=value, font=ctk.CTkFont(size=20, weight="bold"), text_color=color)
         lbl_v.pack(anchor="w", padx=10, pady=(0, 2))
 
         lbl_s = ctk.CTkLabel(card, text=sub, font=ctk.CTkFont(size=11), text_color=DYNAMIC_GRAY)
@@ -258,21 +270,25 @@ class DashboardView(ctk.CTkScrollableFrame):
             self.stats_content.pack_forget()
             self.btn_toggle_stats.configure(text="▶ Expand")
 
+    def _on_elevate_admin(self):
+        restart_as_admin()
+
     def update_telemetry(self, telemetry: Dict[str, Any], culprits: List[Dict[str, Any]], diagnostics: Dict[str, Any]):
         self.top_culprits_cache = culprits
 
         # 1. Update Metric Cards
-        cpu_t = telemetry.get("cpu_package_temp") or telemetry.get("cpu_temp") or 45.0
+        cpu_t = telemetry.get("cpu_package_temp") or telemetry.get("cpu_temp") or 24.0
         max_t = telemetry.get("cpu_temp_max", cpu_t)
-        cpu_l = telemetry.get("cpu_load", 0.0)
-        gpu_t = telemetry.get("gpu_temp", 42.0)
+        gpu_t = telemetry.get("gpu_temp", 22.0)
         gpu_l = telemetry.get("gpu_load", 0.0)
-        fan_rpm = telemetry.get("fan_rpm", 1200)
-        pwr = telemetry.get("cpu_power", 15.0)
+        fan_rpm = telemetry.get("fan_rpm", 0)
+        fan_status = telemetry.get("fan_status", "0 RPM (Silent)")
+        pwr = telemetry.get("cpu_power", 8.0)
         freq = telemetry.get("cpu_freq_mhz", 2400.0)
+        is_adm = telemetry.get("is_admin", False)
 
         self.card_cpu["val"].configure(text=f"{cpu_t:.1f}°C")
-        self.card_cpu["sub"].configure(text=f"Peak: {max_t:.1f}°C")
+        self.card_cpu["sub"].configure(text=f"Peak: {max_t:.1f}°C ({'Ring-0' if is_adm else 'User Mode'})")
 
         if cpu_t >= 80.0:
             self.card_cpu["val"].configure(text_color="#FF0055")
@@ -284,7 +300,13 @@ class DashboardView(ctk.CTkScrollableFrame):
         self.card_gpu["val"].configure(text=f"{gpu_t:.1f}°C")
         self.card_gpu["sub"].configure(text=f"Load: {gpu_l:.0f}%")
 
-        self.card_fan["val"].configure(text=f"{fan_rpm} RPM")
+        if fan_rpm == 0:
+            self.card_fan["val"].configure(text="0 RPM")
+            self.card_fan["sub"].configure(text="Fan Stopped / Silent")
+        else:
+            self.card_fan["val"].configure(text=f"{fan_rpm} RPM")
+            self.card_fan["sub"].configure(text=fan_status)
+
         self.card_power["val"].configure(text=f"{pwr:.1f} W")
         self.card_power["sub"].configure(text=f"{freq:.0f} MHz")
 
