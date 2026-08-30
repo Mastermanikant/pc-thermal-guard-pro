@@ -1,36 +1,21 @@
-﻿{
-  "project_id": "PC_Thermal_Guard_Pro",
-  "project_name": "PC Thermal Guard Pro",
-  "pillar": "02_Desktop_and_Mobile_Apps",
-  "canonical_path": "D:\\02_Desktop_and_Mobile_Apps\\PC_Thermal_Guard_Pro",
-  "category": "Windows Hardware System Utility & Heat Diagnostic Suite",
+{
+  "project_id": "02_pc_thermal_guard_pro",
+  "project_name": "FrankBase PC Thermal Guard Pro",
   "version": "1.0.0",
-  "author": "Master Manikant Yadav",
-  "organization": "FrankBase Ecosystem",
-  "tech_stack": {
-    "runtime": "Python 3.11+",
-    "gui_framework": "CustomTkinter 5.2.2",
-    "sensor_driver": "LibreHardwareMonitorLib.dll (Hypervisor WHQL Compliant)",
-    "process_telemetry": "psutil & Win32 Native API",
-    "persistence": "SQLite (WAL mode, auto-capped 25MB)",
-    "system_tray": "pystray & Pillow",
-    "packaging": "PyInstaller Standalone Executable"
-  },
-  "core_features": [
-    "Real-time Hardware Temperature Monitoring (CPU, GPU, Fan, Motherboard, Power)",
-    "Process-Level Heat Attribution Score (HAS %)",
-    "5-Profile Heuristic Root-Cause Thermal Diagnostic Engine",
-    "1-Click Thermal Relief & Process Throttling",
-    "2-Tier Telemetry History (In-Memory 60-min buffer & SQLite 7-day rolling logs)",
-    "Dynamic Day/Night Dual-Theme (WCAG 2.1 AA Compliant)",
-    "Zero-VRAM / Low-Overhead System Tray Minimization (<25MB RAM footprint)"
-  ],
-  "architecture_invariants": {
-    "ram_budget_mb": 25,
-    "vram_when_minimized_mb": 0,
-    "platform_timer_lock": false,
-    "sqlite_cap_mb": 25,
-    "retention_days": 7
-  },
-  "last_updated": "2026-08-26"
+  "founder": "Master Manikant Yadav",
+  "description": "Native Windows Thermal Telemetry, HAS Process Heat Attribution, and Safe Fan Control Utility",
+  "status": "PRODUCTION_READY",
+  "last_updated": "2026-08-30T09:44:20+05:30",
+  "launcher": "Run_App.bat",
+  "executable": "dist_final/PC_Thermal_Guard_Pro/PC_Thermal_Guard_Pro.exe",
+  "architecture_summary": "PROJECT_SUMMARY_AND_ARCHITECTURE.md",
+  "features": [
+    "Direct Ring-0 Intel DTS & EC Sensor Telemetry",
+    "HAS (Heat Attribution Scoring) Process Tracking",
+    "Foreground-Safe 1-Click Cool Down",
+    "25s Exhaust Hot Air Purge with 2-Min Anti-Spam Safety Lockout",
+    "4-Layer Fan Security Guardrails (Stall Floor, Auto-Decay, Smooth Ramp, 75C Override)",
+    "30-Day SQLite Local Telemetry History",
+    "Offline RSA-2048 Licensing & Privacy-First 100% Offline Architecture"
+  ]
 }
