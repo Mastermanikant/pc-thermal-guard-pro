@@ -18,6 +18,7 @@ from src.ui.top_banner_view import TopCollapsibleHeader
 from src.ui.sidebar_view import CollapsibleSidebar
 from src.ui.dashboard_view import DashboardView
 from src.ui.history_view import HistoryView
+from src.ui.cooling_settings_view import CoolingSettingsView
 from src.ui.about_view import AboutAndLicenseView
 from src.ui.system_tray import SystemTrayManager
 
@@ -96,6 +97,10 @@ class MainWindow(ctk.CTk):
             on_cool_down_callback=self._on_master_cool_down_trigger
         )
         self.view_history = HistoryView(self.content_container, self.history_mgr)
+        self.view_cooling = CoolingSettingsView(
+            self.content_container,
+            on_toast=self.show_toast
+        )
         self.view_about = AboutAndLicenseView(
             self.content_container,
             toast_callback=self.show_toast
@@ -105,7 +110,7 @@ class MainWindow(ctk.CTk):
             "Dashboard": self.view_dashboard,
             "History": self.view_history,
             "Sensors": self.view_dashboard,
-            "Cooling": self.view_dashboard,
+            "Cooling": self.view_cooling,
             "License": self.view_about,
             "About": self.view_about
         }
@@ -136,6 +141,8 @@ class MainWindow(ctk.CTk):
             self.view_dashboard.apply_theme()
         if hasattr(self.view_history, "refresh_theme"):
             self.view_history.refresh_theme()
+        if hasattr(self.view_cooling, "refresh_theme"):
+            self.view_cooling.refresh_theme()
 
         self.show_toast(f"🎨 Switched to {'Night Mode 🌙' if is_dark else 'Day Mode ☀️'}")
 

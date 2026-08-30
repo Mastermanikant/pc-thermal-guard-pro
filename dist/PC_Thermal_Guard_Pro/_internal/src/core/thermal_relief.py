@@ -1,19 +1,21 @@
 ﻿"""
-Smart 1-Click Thermal Relief & Foreground-Safe Process Throttling Engine
+Smart 1-Click Thermal Relief & Secure Fan Control Engine
 PC Thermal Guard Pro
-
-Features:
-1. Smart Foreground Protection: Never throttles the app user is actively using/typing in.
-2. Auto-Restore Timer: Automatically restores process priority after 45s or when CPU temp drops <55°C.
-3. Gentle Core Affinity: Parks background tasks on efficiency/single core to immediately drop thermal power.
-4. Fan Bearing Health Tracking: Computes Fan Health Index (1-100).
+Master Manikant Yadav Ecosystem
 """
+import os
+import json
 import time
 import threading
 from typing import Dict, Any, List, Optional
 import psutil
 
-# Windows API for Foreground Window detection
+# Configuration File Path
+_appdata = os.environ.get("APPDATA") or os.path.expanduser("~")
+CONFIG_DIR = os.path.join(_appdata, "FrankBase", "PCThermalGuardPro")
+os.makedirs(CONFIG_DIR, exist_ok=True)
+CONFIG_FILE = os.path.join(CONFIG_DIR, "thermal_config.json")
+
 def get_foreground_process_id() -> Optional[int]:
     try:
         import win32gui
@@ -27,10 +29,51 @@ def get_foreground_process_id() -> Optional[int]:
     return None
 
 class ThermalReliefEngine:
-    # Tracks currently throttled processes: {pid: {"original_priority": val, "throttled_time": time}}
+    # Configurable Thresholds (Saved to disk)
+    restore_target_temp: float = 55.0      # Target temperature to restore normal priority
+    restore_timeout_sec: int = 45          # Maximum time to keep throttled (seconds)
+    fan_security_enabled: bool = True       # Enforces 25% stall floor and 75°C emergency override
+    emergency_override_temp: float = 75.0  # Temperature that forces 100% fan speed
+
+    # Runtime registry
     _throttled_registry: Dict[int, Dict[str, Any]] = {}
     _watcher_thread: Optional[threading.Thread] = None
     _lock = threading.Lock()
+
+    @classmethod
+    def load_config(cls):
+        try:
+            if os.path.exists(CONFIG_FILE):
+                with open(CONFIG_FILE, "r", encoding="utf-8") as f:
+                    data = json.load(f)
+                    cls.restore_target_temp = float(data.get("restore_target_temp", 55.0))
+                    cls.restore_timeout_sec = int(data.get("restore_timeout_sec", 45))
+                    cls.fan_security_enabled = bool(data.get("fan_security_enabled", True))
+                    cls.emergency_override_temp = float(data.get("emergency_override_temp", 75.0))
+        except Exception:
+            pass
+
+    @classmethod
+    def save_config(cls, target_temp: float = None, timeout_sec: int = None, fan_sec: bool = None):
+        if target_temp is not None:
+            cls.restore_target_temp = float(target_temp)
+        if timeout_sec is not None:
+            cls.restore_timeout_sec = int(timeout_sec)
+        if fan_sec is not None:
+            cls.fan_security_enabled = bool(fan_sec)
+
+        try:
+            data = {
+                "restore_target_temp": cls.restore_target_temp,
+                "restore_timeout_sec": cls.restore_timeout_sec,
+                "fan_security_enabled": cls.fan_security_enabled,
+                "emergency_override_temp": cls.emergency_override_temp,
+                "updated_at": time.time()
+            }
+            with open(CONFIG_FILE, "w", encoding="utf-8") as f:
+                json.dump(data, f, indent=2)
+        except Exception:
+            pass
 
     @classmethod
     def throttle_process(cls, pid: int, is_auto: bool = False) -> Dict[str, Any]:
@@ -69,7 +112,7 @@ class ThermalReliefEngine:
                 if hasattr(psutil, "IDLE_PRIORITY_CLASS"):
                     p.nice(psutil.IDLE_PRIORITY_CLASS)
 
-                # Restrict affinity to single core
+                # Restrict affinity to single core to drop thermal dissipation
                 if hasattr(p, "cpu_affinity"):
                     p.cpu_affinity([0])
 
@@ -98,7 +141,7 @@ class ThermalReliefEngine:
 
     @classmethod
     def restore_process(cls, pid: int) -> bool:
-        """Restores a process back to normal priority."""
+        """Restores a process back to normal priority and all CPU cores."""
         with cls._lock:
             info = cls._throttled_registry.pop(pid, None)
 
@@ -137,7 +180,7 @@ class ThermalReliefEngine:
                     details.append(res["name"])
 
         if throttled_count > 0:
-            msg = f"⚡ Smart Cool Down Active: Throttled {throttled_count} background tasks ({', '.join(details)}). Auto-restores in 45s."
+            msg = f"⚡ Smart Cool Down Active: Throttled {throttled_count} background tasks ({', '.join(details)}). Auto-restores when CPU <{cls.restore_target_temp:.0f}°C or {cls.restore_timeout_sec}s."
             if skipped_fg:
                 msg += f" (Protected active app: {', '.join(skipped_fg)})"
         else:
@@ -159,17 +202,28 @@ class ThermalReliefEngine:
             return
 
         def _watcher_loop():
+            from src.core.hardware_sensor import HardwareSensorEngine
+            sensor_engine = HardwareSensorEngine.get_instance()
+
             while True:
-                time.sleep(5.0)
+                time.sleep(3.0)
                 now = time.time()
                 to_restore = []
+
+                # Read live telemetry
+                try:
+                    telemetry = sensor_engine.get_telemetry()
+                    current_temp = telemetry.get("cpu_package_temp") or telemetry.get("cpu_temp") or 45.0
+                except Exception:
+                    current_temp = 50.0
 
                 with cls._lock:
                     if not cls._throttled_registry:
                         break
                     for pid, data in list(cls._throttled_registry.items()):
-                        # Restore after 45 seconds
-                        if now - data["throttled_at"] >= 45.0:
+                        elapsed = now - data["throttled_at"]
+                        # Restore condition: Either target temp reached OR timeout exceeded
+                        if current_temp <= cls.restore_target_temp or elapsed >= cls.restore_timeout_sec:
                             to_restore.append(pid)
 
                 for pid in to_restore:
@@ -177,3 +231,6 @@ class ThermalReliefEngine:
 
         cls._watcher_thread = threading.Thread(target=_watcher_loop, daemon=True)
         cls._watcher_thread.start()
+
+# Load saved config on startup
+ThermalReliefEngine.load_config()
