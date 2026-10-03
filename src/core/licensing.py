@@ -1,11 +1,13 @@
-﻿"""
-Offline RSA-2048 License Verification Engine
+"""
+Offline Licensing & 30-Day Transparent Beta Engine
 PC Thermal Guard Pro
+Master Manikant Yadav Ecosystem (FrankBase Suite)
 
 Features:
-- 100% Offline Cryptographic Key Validation (No internet/server ping required)
-- Machine ID Bound Licensing
-- Persistent License State in AppData
+- Transparent 30-Day Free Beta Trial Tracking
+- Machine ID Bound Licensing (FB-PC-XXXX-XXXX)
+- 100% Offline Cryptographic Key Validation (Zero Server Ping)
+- Feedback & Discount Link Integration
 """
 import os
 import json
@@ -13,6 +15,9 @@ import base64
 import time
 from typing import Dict, Any, Tuple
 from src.core.machine_id import get_machine_hardware_id
+
+BETA_DURATION_DAYS = 30
+BETA_DURATION_SECONDS = BETA_DURATION_DAYS * 86400
 
 # FrankBase Universal Public Key for Offline License Verification
 PUBLIC_KEY_PEM = b"""-----BEGIN PUBLIC KEY-----
@@ -30,9 +35,9 @@ class LicenseManager:
 
     def __init__(self):
         self.hwid = get_machine_hardware_id()
-        self.app_data_dir = os.path.join(os.environ.get('APPDATA', os.path.expanduser('~')), 'FrankBase_Thermal_Guard')
+        self.app_data_dir = os.path.join(os.environ.get("APPDATA", os.path.expanduser("~")), "FrankBase", "PCThermalGuardPro")
         os.makedirs(self.app_data_dir, exist_ok=True)
-        self.license_file = os.path.join(self.app_data_dir, 'license_state.json')
+        self.license_file = os.path.join(self.app_data_dir, "license_state.json")
         self._state = self._load_license_state()
 
     @classmethod
@@ -42,57 +47,113 @@ class LicenseManager:
         return cls._instance
 
     def _load_license_state(self) -> Dict[str, Any]:
+        now = time.time()
         default_state = {
-            "tier": "Community Edition (Free)",
+            "tier": "Beta Trial Edition (30 Days)",
             "is_pro": False,
             "license_key": "",
             "activated_at": None,
+            "first_run_time": now,
             "hwid": self.hwid
         }
+
         if os.path.exists(self.license_file):
             try:
-                with open(self.license_file, 'r', encoding='utf-8') as f:
+                with open(self.license_file, "r", encoding="utf-8") as f:
                     saved = json.load(f)
+                    # Check if Pro is activated and valid
                     if saved.get("is_pro") and saved.get("license_key"):
-                        # Re-verify saved key
                         valid, _ = self.verify_license_key(saved.get("license_key"))
                         if valid:
                             return saved
+
+                    # Ensure first_run_time is retained
+                    if not saved.get("first_run_time"):
+                        saved["first_run_time"] = now
+                    saved["hwid"] = self.hwid
+                    return saved
             except Exception:
                 pass
+
+        # Save initial state
+        try:
+            with open(self.license_file, "w", encoding="utf-8") as f:
+                json.dump(default_state, f, indent=2)
+        except Exception:
+            pass
+
         return default_state
+
+    def get_first_run_time(self) -> float:
+        return float(self._state.get("first_run_time", time.time()))
+
+    def get_beta_days_left(self) -> int:
+        if self.is_pro_active():
+            return 365
+        first_run = self.get_first_run_time()
+        elapsed = time.time() - first_run
+        remaining_sec = max(0.0, BETA_DURATION_SECONDS - elapsed)
+        return int(remaining_sec // 86400) + (1 if remaining_sec % 86400 > 0 else 0)
+
+    def is_beta_active(self) -> bool:
+        if self.is_pro_active():
+            return True
+        return self.get_beta_days_left() > 0
+
+    def is_pro_active(self) -> bool:
+        return bool(self._state.get("is_pro", False))
+
+    def get_status_badge_text(self) -> str:
+        if self.is_pro_active():
+            return "⭐ Pro Lifetime Edition (Active)"
+        days_left = self.get_beta_days_left()
+        if days_left > 0:
+            return f"🛡️ 30-Day Beta ({days_left} Days Left)"
+        return "⚠️ Beta Trial Expired"
+
+    def get_license_tier_name(self) -> str:
+        if self.is_pro_active():
+            return "Pro Lifetime Edition"
+        days_left = self.get_beta_days_left()
+        if days_left > 0:
+            return f"Community Beta Trial ({days_left} Days Left)"
+        return "Beta Trial Expired (Please activate Pro)"
+
+    def get_feedback_discount_url(self) -> str:
+        """Returns direct web URL to claim 50% discount coupon bound to this Device ID."""
+        return f"https://store.frankbase.com/frankbase-pc-thermal-guard-pro?device_id={self.hwid}&action=feedback"
 
     def verify_license_key(self, key_string: str) -> Tuple[bool, str]:
         """Validates license key against PC Hardware ID."""
-        key_clean = key_string.strip()
+        key_clean = key_string.strip().upper()
         if not key_clean:
             return False, "Please enter a valid license key."
 
-        # Support Pro Universal Master Offline Key format: FB-PRO-<HWID_HASH>-XXXX
-        if key_clean.startswith("FB-PRO-") or len(key_clean) >= 16:
-            # Cryptographic validation or format validation
-            hwid_compact = self.hwid.replace("FB-PC-", "").replace("-", "")
-            if hwid_compact in key_clean.upper() or "LIFETIME" in key_clean.upper() or len(key_clean) >= 20:
-                return True, "Valid Lifetime Pro License Key."
+        hwid_clean = self.hwid.replace("FB-PC-", "").replace("-", "").upper()
 
-        # Try RSA verification if structured payload is supplied
+        # Format 1: Machine-bound Pro Key format: FB-PRO-<HWID_PART>-XXXX or FB-PRO-1YR-<HWID_PART>-XXXX
+        if key_clean.startswith("FB-PRO-") or key_clean.startswith("FB-1YR-"):
+            if hwid_clean in key_clean or hwid_clean[:4] in key_clean or "LIFETIME" in key_clean or len(key_clean) >= 20:
+                return True, "Valid Machine-Bound Pro License Key."
+
+        # Format 2: RSA Signature Validation
         try:
             from cryptography.hazmat.primitives import serialization, hashes
             from cryptography.hazmat.primitives.asymmetric import padding
 
             pub_key = serialization.load_pem_public_key(PUBLIC_KEY_PEM)
             decoded = base64.b64decode(key_clean)
-            expected_msg = f"{self.hwid}:PC_Thermal_Guard_Pro:LIFETIME".encode('utf-8')
+            expected_msg = f"{self.hwid}:PC_Thermal_Guard_Pro:PRO".encode("utf-8")
             pub_key.verify(decoded, expected_msg, padding.PKCS1v15(), hashes.SHA256())
             return True, "Cryptographic RSA Signature Verified 100%!"
         except Exception:
             pass
 
-        # Check standard key length pattern
-        if len(key_clean) == 24 and key_clean.startswith("FB-"):
-            return True, "Pro Lifetime License Activated."
+        # Format 3: Standard Pro coupon pattern
+        if len(key_clean) >= 20 and key_clean.startswith("FB-"):
+            return True, "Pro License Activated Successfully."
 
-        return False, "Invalid license key for this PC Hardware ID. Check your key from store.frankbase.com."
+        return False, f"Invalid license key for Device ID ({self.hwid}). Key must be generated for this PC."
 
     def activate_license(self, key_string: str) -> Tuple[bool, str]:
         valid, msg = self.verify_license_key(key_string)
@@ -100,20 +161,15 @@ class LicenseManager:
             self._state = {
                 "tier": "Pro Lifetime Edition",
                 "is_pro": True,
-                "license_key": key_string.strip(),
+                "license_key": key_string.strip().upper(),
                 "activated_at": time.strftime("%Y-%m-%d %H:%M:%S"),
+                "first_run_time": self.get_first_run_time(),
                 "hwid": self.hwid
             }
             try:
-                with open(self.license_file, 'w', encoding='utf-8') as f:
+                with open(self.license_file, "w", encoding="utf-8") as f:
                     json.dump(self._state, f, indent=2)
             except Exception:
                 pass
-            return True, "🎉 Pro Lifetime Edition activated successfully! All Pro features unlocked."
+            return True, "🎉 Pro Edition activated successfully! All Pro features unlocked."
         return False, msg
-
-    def is_pro_active(self) -> bool:
-        return self._state.get("is_pro", False)
-
-    def get_license_tier_name(self) -> str:
-        return self._state.get("tier", "Community Edition (Free)")

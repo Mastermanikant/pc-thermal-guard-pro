@@ -1,4 +1,4 @@
-﻿"""
+"""
 Hardware Sensor & Telemetry Engine (High Precision Ring-0 + Accurate User-Mode Fallback)
 PC Thermal Guard Pro
 Master Manikant Yadav Ecosystem
@@ -208,7 +208,7 @@ class HardwareSensorEngine:
             estimated_temp = base_ambient + (cpu_load * 0.45) + (freq_ratio * 4.0)
             cpu_temp = round(estimated_temp, 1)
             cpu_temp_max = round(cpu_temp + 2.5, 1)
-            source = 'User Mode (Estimated) — Run as Admin for Exact Sensors'
+            source = 'User Mode (Estimated) : Run as Admin for Exact Sensors'
 
         if gpu_temp is None:
             gpu_temp = round(max(18.0, cpu_temp - 2.0 + (gpu_load * 0.25)), 1)
@@ -266,7 +266,7 @@ class HardwareSensorEngine:
     def driver_mode(self) -> str:
         if self.is_admin_mode and self.lhm_initialized:
             return 'LibreHardwareMonitor (Ring-0 Direct Silicon)'
-        return 'User Mode (Estimated) — Run as Admin for 100% Direct Silicon'
+        return 'User Mode (Estimated) : Run as Admin for 100% Direct Silicon'
 
     def get_telemetry(self) -> Dict[str, Any]:
         return self.get_current_telemetry()

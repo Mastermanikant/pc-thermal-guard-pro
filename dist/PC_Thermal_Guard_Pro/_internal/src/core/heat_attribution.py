@@ -1,14 +1,14 @@
 ﻿"""
-Process Heat Attribution Engine
+Process Heat Attribution Engine (Real-Time Attribution HAS %)
 PC Thermal Guard Pro
-
-Calculates real-time normalized Heat Attribution Score (HAS %) for running processes.
-Attribution Formula:
-HAS_i = [(CPU_Cycle_Share_i * W_cpu) + (GPU_Share_i * W_gpu) + (IO_Share_i * W_io)] / Total_Dissipation * 100
+Master Manikant Yadav Ecosystem
 """
 import os
 import psutil
 from typing import List, Dict, Any
+from src.core.logger import get_logger
+
+logger = get_logger("HeatAttribution")
 
 PROCESS_DESCRIPTIONS = {
     'chrome.exe': 'Google Chrome Browser',
@@ -43,41 +43,42 @@ PROCESS_DESCRIPTIONS = {
 IGNORED_PROCESSES = {'system idle process', 'idle'}
 
 class HeatAttributionEngine:
-    def __init__(self):
-        self._last_process_samples: Dict[int, float] = {}
-
-    def get_top_heat_culprits(self, total_cpu_load: float = 100.0, limit: int = 5) -> List[Dict[str, Any]]:
+    @classmethod
+    def get_top_heat_culprits(cls, total_cpu_load: float = 100.0, limit: int = 5) -> List[Dict[str, Any]]:
         """Returns top heat-generating processes with normalized Heat Attribution Score (HAS %)."""
         process_candidates = []
         total_active_cpu = 0.0
 
-        for proc in psutil.process_iter(['pid', 'name', 'cpu_percent', 'memory_info']):
-            try:
-                info = proc.info
-                p_name = (info.get('name') or '').lower()
-                pid = info.get('pid', 0)
+        try:
+            for proc in psutil.process_iter(['pid', 'name', 'cpu_percent', 'memory_info']):
+                try:
+                    info = proc.info
+                    p_name = (info.get('name') or '').lower()
+                    pid = info.get('pid', 0)
 
-                if pid == 0 or p_name in IGNORED_PROCESSES:
+                    if pid == 0 or p_name in IGNORED_PROCESSES:
+                        continue
+
+                    cpu_pct = info.get('cpu_percent') or 0.0
+                    mem_bytes = info.get('memory_info').rss if info.get('memory_info') else 0
+                    mem_mb = round(mem_bytes / (1024 * 1024), 1)
+
+                    if cpu_pct > 0.0 or mem_mb > 50:
+                        total_active_cpu += cpu_pct
+                        friendly_desc = PROCESS_DESCRIPTIONS.get(p_name, info.get('name') or f'PID_{pid}')
+
+                        process_candidates.append({
+                            'pid': pid,
+                            'name': info.get('name') or f'PID_{pid}',
+                            'description': friendly_desc,
+                            'cpu_percent': round(cpu_pct, 1),
+                            'memory_mb': mem_mb,
+                            'raw_score': cpu_pct * 1.0 + (mem_mb / 500.0) * 0.1
+                        })
+                except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
                     continue
-
-                cpu_pct = info.get('cpu_percent') or 0.0
-                mem_bytes = info.get('memory_info').rss if info.get('memory_info') else 0
-                mem_mb = round(mem_bytes / (1024 * 1024), 1)
-
-                if cpu_pct > 0.1 or mem_mb > 150:
-                    total_active_cpu += cpu_pct
-                    friendly_desc = PROCESS_DESCRIPTIONS.get(p_name, info.get('name') or f'PID_{pid}')
-
-                    process_candidates.append({
-                        'pid': pid,
-                        'name': info.get('name') or f'PID_{pid}',
-                        'description': friendly_desc,
-                        'cpu_percent': round(cpu_pct, 1),
-                        'memory_mb': mem_mb,
-                        'raw_score': cpu_pct * 1.0 + (mem_mb / 500.0) * 0.1
-                    })
-            except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
-                continue
+        except Exception as e:
+            logger.error(f"Error enumerating processes: {e}")
 
         if not process_candidates:
             return []
@@ -104,7 +105,7 @@ class HeatAttributionEngine:
                 p['heat_level'] = 'Moderate'
                 p['heat_color'] = '#eab308'
             else:
-                p['heat_level'] = 'Normal'
+                p['heat_level'] = 'Low'
                 p['heat_color'] = '#10b981'
 
         return top_processes

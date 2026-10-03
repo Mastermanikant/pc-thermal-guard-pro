@@ -1,10 +1,7 @@
 ﻿"""
 Rolling Telemetry History & Diagnostic Ledger Engine
 PC Thermal Guard Pro
-
-2-Tier Storage Architecture:
-- Tier 1: In-memory circular buffer (deque) for real-time 60-min live visual scrubbing (Zero Disk IO).
-- Tier 2: SQLite database (WAL mode) storing 7-day rolling telemetry, auto-capped at 25MB.
+Master Manikant Yadav Ecosystem
 """
 import os
 import sqlite3
@@ -12,12 +9,17 @@ import time
 import json
 import collections
 from typing import List, Dict, Any, Optional
+from src.core.logger import get_logger
+
+logger = get_logger("HistoryManager")
 
 class HistoryManager:
     def __init__(self, db_path: Optional[str] = None):
-        self.db_path = db_path or os.path.abspath(
-            os.path.join(os.path.dirname(__file__), "..", "..", "thermal_history.db")
-        )
+        _appdata = os.environ.get("APPDATA") or os.path.expanduser("~")
+        default_dir = os.path.join(_appdata, "FrankBase", "PCThermalGuardPro")
+        os.makedirs(default_dir, exist_ok=True)
+
+        self.db_path = db_path or os.path.join(default_dir, "thermal_history.db")
         # Tier 1: In-memory 60-minute circular ring buffer (sampled 1Hz = 3600 samples)
         self.ring_buffer = collections.deque(maxlen=3600)
         self._last_disk_flush = time.time()
@@ -42,15 +44,16 @@ class HistoryManager:
                 """)
                 conn.execute("CREATE INDEX IF NOT EXISTS idx_timestamp ON thermal_logs(timestamp);")
                 conn.commit()
+            logger.info(f"SQLite DB initialized: {self.db_path}")
         except Exception as e:
-            print(f"DB Init Error: {e}")
+            logger.error(f"DB Init Error: {e}")
 
-    def record_sample(self, telemetry: Dict[str, Any], culprits: List[Dict[str, Any]], diag_status: str):
+    def record_sample(self, telemetry: Dict[str, Any], culprits: List[Dict[str, Any]], diag_status: str = "OPTIMAL"):
         now = time.time()
-        cpu_temp = telemetry.get("cpu_temp", 45.0)
+        cpu_temp = telemetry.get("cpu_package_temp") or telemetry.get("cpu_temp", 24.0)
         cpu_load = telemetry.get("cpu_load", 0.0)
-        gpu_temp = telemetry.get("gpu_temp", 42.0)
-        fan_rpm = telemetry.get("fan_rpm", 1200)
+        gpu_temp = telemetry.get("gpu_temp", 22.0)
+        fan_rpm = telemetry.get("fan_rpm", 0)
 
         top_name = culprits[0]["name"] if culprits else "System"
         top_has = culprits[0]["heat_score"] if culprits else 0.0
@@ -71,9 +74,13 @@ class HistoryManager:
         self.ring_buffer.append(sample)
 
         # Tier 2: Flush to SQLite every 60 seconds (or on high overheat event)
-        if (now - self._last_disk_flush >= 60.0) or (cpu_temp >= 85.0 and now - self._last_disk_flush >= 10.0):
+        if (now - self._last_disk_flush >= 60.0) or (cpu_temp >= 80.0 and now - self._last_disk_flush >= 10.0):
             self._flush_to_db(sample)
             self._last_disk_flush = now
+
+    def add_telemetry_point(self, telemetry: Dict[str, Any], culprits: List[Dict[str, Any]], diag_status: str = "OPTIMAL"):
+        """Alias for record_sample to ensure 100% backward compatibility."""
+        self.record_sample(telemetry, culprits, diag_status)
 
     def _flush_to_db(self, sample: Dict[str, Any]):
         try:
@@ -97,7 +104,7 @@ class HistoryManager:
                 conn.commit()
             self._enforce_retention_policy()
         except Exception as e:
-            print(f"DB Flush Error: {e}")
+            logger.error(f"DB Flush Error: {e}")
 
     def _enforce_retention_policy(self):
         try:
@@ -119,46 +126,36 @@ class HistoryManager:
     def get_recent_ring_buffer(self) -> List[Dict[str, Any]]:
         return list(self.ring_buffer)
 
-    def get_db_history(self, limit: int = 100) -> List[Dict[str, Any]]:
+    def get_historical_records(self, limit: int = 100) -> List[Dict[str, Any]]:
+        records = []
         try:
             with sqlite3.connect(self.db_path) as conn:
                 conn.row_factory = sqlite3.Row
-                cursor = conn.cursor()
-                cursor.execute(
-                    "SELECT * FROM thermal_logs ORDER BY timestamp DESC LIMIT ?;", (limit,)
-                )
-                rows = cursor.fetchall()
-                results = []
-                for r in rows:
-                    t_val = r["timestamp"]
-                    results.append({
-                        "id": r["id"],
-                        "timestamp": t_val,
-                        "time_str": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(t_val)),
-                        "cpu_temp": r["cpu_temp"],
-                        "cpu_load": r["cpu_load"],
-                        "gpu_temp": r["gpu_temp"],
-                        "fan_rpm": r["fan_rpm"],
-                        "top_culprit": r["top_culprit"],
-                        "top_has": r["top_has"],
-                        "diag_status": r["diag_status"]
-                    })
-                return results
-        except Exception:
-            return []
+                cursor = conn.execute("SELECT * FROM thermal_logs ORDER BY timestamp DESC LIMIT ?;", (limit,))
+                for row in cursor.fetchall():
+                    d = dict(row)
+                    d["time_str"] = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(d["timestamp"]))
+                    records.append(d)
+        except Exception as e:
+            logger.error(f"DB Read Error: {e}")
+        return records
 
-    def export_report_json(self, export_file: str) -> bool:
+    def get_db_history(self, limit: int = 50) -> List[Dict[str, Any]]:
+        """Alias for HistoryView."""
+        return self.get_historical_records(limit=limit)
+
+    def export_report_json(self, file_path: str) -> bool:
         try:
-            records = self.get_db_history(limit=5000)
+            records = self.get_historical_records(limit=500)
             data = {
-                "tool": "PC Thermal Guard Pro",
-                "export_timestamp": time.time(),
-                "export_time": time.strftime("%Y-%m-%d %H:%M:%S"),
-                "record_count": len(records),
+                "generated_at": time.strftime("%Y-%m-%d %H:%M:%S"),
+                "total_records": len(records),
                 "records": records
             }
-            with open(export_file, 'w', encoding='utf-8') as f:
+            with open(file_path, "w", encoding="utf-8") as f:
                 json.dump(data, f, indent=2)
+            logger.info(f"Report successfully exported to: {file_path}")
             return True
-        except Exception:
+        except Exception as e:
+            logger.error(f"Export Error: {e}")
             return False

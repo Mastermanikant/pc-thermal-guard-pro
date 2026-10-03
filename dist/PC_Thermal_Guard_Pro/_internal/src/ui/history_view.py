@@ -1,4 +1,4 @@
-﻿"""
+"""
 History & Visual Telemetry Timeline View
 PC Thermal Guard Pro
 
@@ -118,6 +118,10 @@ class HistoryView(ctk.CTkFrame):
         self.log_table_frame.pack(fill="both", expand=True, padx=10, pady=(0, 10))
 
         self.refresh_log_table()
+
+    def update_live_chart(self):
+        """Alias for real-time live chart updates."""
+        self.update_chart()
 
     def update_chart(self):
         """Draws real-time temperature curve onto canvas."""

@@ -1,8 +1,9 @@
-﻿"""
-Dashboard View Component (100% Matched with FrankBase Smart File Organizer Architecture - Screenshots 2 & 3)
-PC Thermal Guard Pro
-Master Manikant Yadav Ecosystem
 """
+Dashboard View Component
+PC Thermal Guard Pro
+Master Manikant Yadav Ecosystem (FrankBase Suite)
+"""
+import time
 import customtkinter as ctk
 from typing import Dict, Any, List, Callable
 from src.ui.theme import ThemeManager, NEON_CYAN, NEON_MAGENTA, NEON_GREEN, BG_COLOR, FRAME_BG, BORDER_COLOR, TEXT_COLOR, DYNAMIC_GRAY
@@ -28,19 +29,19 @@ class DashboardView(ctk.CTkScrollableFrame):
         self.is_elevated = is_admin()
 
         self._build_ui()
+        self._check_exhaust_cooldown_tick()
 
     def _build_ui(self):
-        # ── 1. Top Section: Global Thermal Stats & Preview ──
+        # ── 1. Top Section: Global Thermal Stats & Telemetry ──
         self.stats_card = ctk.CTkFrame(self, fg_color=FRAME_BG, corner_radius=8, border_width=1, border_color=BORDER_COLOR)
         self.stats_card.pack(fill="x", padx=10, pady=(10, 8))
 
-        # Card Header
         stats_hdr = ctk.CTkFrame(self.stats_card, fg_color="transparent")
         stats_hdr.pack(fill="x", padx=15, pady=(10, 6))
 
         ctk.CTkLabel(
             stats_hdr,
-            text="📊 Global Thermal Stats & Live Telemetry",
+            text="📊 Live Hardware Sensors & Telemetry",
             font=ctk.CTkFont(size=14, weight="bold"),
             text_color=TEXT_COLOR
         ).pack(side="left")
@@ -49,7 +50,7 @@ class DashboardView(ctk.CTkScrollableFrame):
         if not self.is_elevated:
             self.btn_admin_badge = ctk.CTkButton(
                 stats_hdr,
-                text="🛡️ Run as Admin (Direct Sensor Probe)",
+                text="🛡️ Run as Admin (Direct Silicon Sensors)",
                 height=26,
                 corner_radius=6,
                 fg_color="#880e4f",
@@ -123,11 +124,29 @@ class DashboardView(ctk.CTkScrollableFrame):
         )
         self.lbl_diag_title.pack(side="left", padx=10)
 
-        # Master Magenta 1-Click Cool Down Button
+        # Action Buttons Container (Right Side)
+        btn_box = ctk.CTkFrame(diag_hdr, fg_color="transparent")
+        btn_box.pack(side="right")
+
+        # 💨 Exhaust Hot Air Button (With Anti-Spam Safety Cooldown Lockout)
+        self.btn_exhaust_air = ctk.CTkButton(
+            btn_box,
+            text="💨 Exhaust Hot Air (25s)",
+            font=ctk.CTkFont(size=11, weight="bold"),
+            fg_color=NEON_CYAN,
+            hover_color="#00b0ff",
+            text_color="black",
+            corner_radius=8,
+            height=32,
+            command=self._on_exhaust_air_purge
+        )
+        self.btn_exhaust_air.pack(side="left", padx=(0, 6))
+
+        # ⚡ Master Cool Down & RAM Purge Button
         self.btn_master_cool = ctk.CTkButton(
-            diag_hdr,
-            text="⚡ 1-Click Cool Down",
-            font=ctk.CTkFont(size=12, weight="bold"),
+            btn_box,
+            text="⚡ 1-Click Cool Down & RAM Purge",
+            font=ctk.CTkFont(size=11, weight="bold"),
             fg_color=NEON_MAGENTA,
             hover_color="#c00060",
             text_color="white",
@@ -135,7 +154,7 @@ class DashboardView(ctk.CTkScrollableFrame):
             height=32,
             command=self._on_master_cool_down
         )
-        self.btn_master_cool.pack(side="right")
+        self.btn_master_cool.pack(side="left")
 
         self.lbl_diag_desc = ctk.CTkLabel(
             self.hero_diag,
@@ -159,7 +178,7 @@ class DashboardView(ctk.CTkScrollableFrame):
         )
         self.lbl_diag_rec.pack(fill="x", padx=15, pady=(0, 10))
 
-        # ── 3. Middle Section: Top Heat Culprit Applications (Real-Time Attribution) ──
+        # ── 3. Middle Section: Top Heat Culprit Applications ──
         self.culprits_card = ctk.CTkFrame(self, fg_color=FRAME_BG, corner_radius=8, border_width=1, border_color=BORDER_COLOR)
         self.culprits_card.pack(fill="x", padx=10, pady=8)
 
@@ -175,7 +194,7 @@ class DashboardView(ctk.CTkScrollableFrame):
 
         ctk.CTkLabel(
             culprits_hdr,
-            text="Ranks running apps by their direct thermal contribution (HAS %)",
+            text="Ranks running apps by their thermal impact (HAS %)",
             font=ctk.CTkFont(size=11, slant="italic"),
             text_color=DYNAMIC_GRAY
         ).pack(side="right")
@@ -273,6 +292,40 @@ class DashboardView(ctk.CTkScrollableFrame):
     def _on_elevate_admin(self):
         restart_as_admin()
 
+    def _on_exhaust_air_purge(self):
+        res = ThermalReliefEngine.trigger_exhaust_hot_air(self.top_culprits_cache)
+        if self.on_toast:
+            self.on_toast("💨 Hot Air Exhaust", res["message"])
+        self._check_exhaust_cooldown_tick()
+
+    def _check_exhaust_cooldown_tick(self):
+        rem = ThermalReliefEngine.get_exhaust_remaining_cooldown()
+        if rem > 0:
+            if ThermalReliefEngine.is_exhausting:
+                self.btn_exhaust_air.configure(
+                    state="disabled",
+                    fg_color="#004433",
+                    text_color=NEON_GREEN,
+                    text=f"⏳ Purging Air ({rem - 95}s)..." if rem > 95 else f"⏳ Purging Air ({rem}s)..."
+                )
+            else:
+                self.btn_exhaust_air.configure(
+                    state="disabled",
+                    fg_color="#222222",
+                    text_color=DYNAMIC_GRAY,
+                    text=f"🔒 Cooldown ({rem}s)"
+                )
+        else:
+            self.btn_exhaust_air.configure(
+                state="normal",
+                fg_color=NEON_CYAN,
+                text_color="black",
+                text="💨 Exhaust Hot Air (25s)"
+            )
+
+        # Re-check every second
+        self.after(1000, self._check_exhaust_cooldown_tick)
+
     def update_telemetry(self, telemetry: Dict[str, Any], culprits: List[Dict[str, Any]], diagnostics: Dict[str, Any]):
         self.top_culprits_cache = culprits
 
@@ -349,7 +402,7 @@ class DashboardView(ctk.CTkScrollableFrame):
     def _on_master_cool_down(self):
         res = ThermalReliefEngine.one_click_cool_down(self.top_culprits_cache)
         if self.on_toast:
-            self.on_toast("1-Click Cool Down", res["message"])
+            self.on_toast("1-Click Cool Down & RAM Purge", res["message"])
 
     def apply_theme(self):
         self.configure(fg_color=BG_COLOR)

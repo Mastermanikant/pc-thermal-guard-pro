@@ -1,4 +1,4 @@
-﻿"""
+"""
 Smart Cooling & Secure Fan Control Settings View
 PC Thermal Guard Pro
 Master Manikant Yadav Ecosystem
@@ -81,7 +81,7 @@ class CoolingSettingsView(ctk.CTkScrollableFrame):
 
         self.lbl_temp_hint = ctk.CTkLabel(
             temp_card,
-            text=f"💡 Current Selection: {self.temp_var.get()} — Recommended for balanced thermal longevity and smooth background multitasking.",
+            text=f"💡 Current Selection: {self.temp_var.get()} : Recommended for balanced thermal longevity and smooth multitasking.",
             font=ctk.CTkFont(size=10, slant="italic"),
             text_color=NEON_GREEN
         )
@@ -214,7 +214,7 @@ class CoolingSettingsView(ctk.CTkScrollableFrame):
     def _on_temp_changed(self, value: str):
         val = float(value.replace("°C", ""))
         ThermalReliefEngine.save_config(target_temp=val)
-        self.lbl_temp_hint.configure(text=f"💡 Current Selection: {val:.0f}°C — Setting saved to persistent disk configuration.")
+        self.lbl_temp_hint.configure(text=f"💡 Current Selection: {val:.0f}°C : Setting saved to persistent disk configuration.")
         if self.toast:
             self.toast(f"💾 Target Cool-Down threshold set to {val:.0f}°C")
 

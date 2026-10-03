@@ -2,7 +2,7 @@
 
 ## **Executive Summary & Market Opportunity**
 
-The desktop computer performance utility landscape suffers from a systemic architectural divide. On one end of the spectrum reside hyper-specialized enthusiast diagnostic tools such as HWiNFO64 and AIDA64 Extreme. While these utilities excel at low-level hardware sensor parsing, they present uncontextualized raw telemetry—often displaying upwards of 150 simultaneous metrics—creating significant cognitive overload for non-enthusiast users1. On the opposite end are original equipment manufacturer (OEM) software suites, including ASUS Armoury Crate, Corsair iCUE, and NZXT CAM. These applications frequently introduce severe system degradation, exhibiting memory leaks that consume between 500MB and 20GB of RAM, installing invasive background services, and locking system platform timer resolutions, which degrades idle CPU power efficiency4.  
+The desktop computer performance utility landscape suffers from a systemic architectural divide. On one end of the spectrum reside hyper-specialized enthusiast diagnostic tools such as HWiNFO64 and AIDA64 Extreme. While these utilities excel at low-level hardware sensor parsing, they present uncontextualized raw telemetry-often displaying upwards of 150 simultaneous metrics-creating significant cognitive overload for non-enthusiast users1. On the opposite end are original equipment manufacturer (OEM) software suites, including ASUS Armoury Crate, Corsair iCUE, and NZXT CAM. These applications frequently introduce severe system degradation, exhibiting memory leaks that consume between 500MB and 20GB of RAM, installing invasive background services, and locking system platform timer resolutions, which degrades idle CPU power efficiency4.  
 Modern community-driven utilities like Rem0o’s Fan Control have advanced user-defined fan curve management9. However, because they rely on traditional user interface (UI) frameworks like Windows Presentation Foundation (WPF), they introduce secondary technical limitations8. These include video memory (VRAM) leakage, UI thread lockups during sensor refresh cycles, and forced system timer resolution overrides that prevent CPU cores from entering deep power-saving package C-states8.  
 A clear market opportunity exists for an application engineered to bridge the gap between low-level telemetry drivers and actionable root-cause diagnostics. By combining signed, hypervisor-compliant driver access with process-level hardware utilization profiling, a utility can attribute thermal spikes directly to individual executing Process IDs (PIDs). Operating within a memory footprint below 30MB of RAM and zero dedicated VRAM overhead, such a system can translate hardware metrics into clear diagnostic guidance for both everyday users and hardware enthusiasts.
 
@@ -25,7 +25,7 @@ To establish the architectural baseline for a next-generation thermal management
 
 * **ASUS Armoury Crate**: Installs up to a dozen background services and persistent Windows Task Scheduler entries4. Technical teardowns reveal persistent memory leaks scaling from 500MB up to 20GB under continuous operation4. Armoury Crate also utilizes system BIOS configuration flags to re-install components upon OS reboot, frustrating user attempts at complete software removal5.  
 * **Corsair iCUE**: Suffers from driver module instability (CorsairCpuIdSe), which can induce system hangs, memory leaks up to 64GB, and conflicts with motherboard RGB services7.  
-* **NZXT CAM, Razer Synapse, & Alienware Command Center**: These packages exhibit elevated CPU and disk overhead driven by mandatory telemetry collection, cloud authentication requirements, and persistent log writing—such as Razer Synapse generating up to 70GB of debug logs on primary storage drives16.
+* **NZXT CAM, Razer Synapse, & Alienware Command Center**: These packages exhibit elevated CPU and disk overhead driven by mandatory telemetry collection, cloud authentication requirements, and persistent log writing-such as Razer Synapse generating up to 70GB of debug logs on primary storage drives16.
 
 #### **Modern Open-Source & Community Favorites**
 
@@ -50,7 +50,7 @@ Analysis of community discussions across Reddit (r/pcmasterrace, r/techsupport, 
 
 ### **1\. Telemetry Overload without Actionable Context**
 
-Standard monitoring tools present raw numerical arrays—such as CPU Core \#0–\#24 Temperatures, CPU Package, CPU IA Cores, SOC, Thermal Velocity Boost Offsets, and Distance to TJMax—simultaneously1. Everyday users cannot easily determine whether an 88°C spike reflects normal transient boosting behavior or a thermal cooling deficiency.
+Standard monitoring tools present raw numerical arrays-such as CPU Core \#0–\#24 Temperatures, CPU Package, CPU IA Cores, SOC, Thermal Velocity Boost Offsets, and Distance to TJMax-simultaneously1. Everyday users cannot easily determine whether an 88°C spike reflects normal transient boosting behavior or a thermal cooling deficiency.
 
 ### **2\. The "Culprit Gap" (Missing Process-to-Temperature Correlation)**
 
