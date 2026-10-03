@@ -321,12 +321,13 @@ class DashboardView(ctk.CTkScrollableFrame):
         # 1. Update Metric Cards
         cpu_t = telemetry.get("cpu_package_temp") or telemetry.get("cpu_temp") or 24.0
         max_t = telemetry.get("cpu_temp_max", cpu_t)
+        cpu_pwr = telemetry.get("cpu_power", 0.0)
         gpu_t = telemetry.get("gpu_temp", 22.0)
         gpu_l = telemetry.get("gpu_load", 0.0)
         is_adm = telemetry.get("is_admin", False)
 
         self.card_cpu["val"].configure(text=f"{cpu_t:.1f}°C")
-        self.card_cpu["sub"].configure(text=f"Peak: {max_t:.1f}°C ({'Admin' if is_adm else 'Standard'})")
+        self.card_cpu["sub"].configure(text=f"Peak: {max_t:.1f}°C | Power: {cpu_pwr:.1f}W")
 
         if cpu_t >= 80.0:
             self.card_cpu["val"].configure(text_color="#FF0055")

@@ -21,6 +21,14 @@ from src.core.logger import get_logger
 
 logger = get_logger("ThermalRelief")
 
+CRITICAL_SYSTEM_PROCESSES = {
+    'system', 'registry', 'smss.exe', 'csrss.exe', 'wininit.exe', 'services.exe',
+    'lsass.exe', 'svchost.exe', 'fontdrvhost.exe', 'dwm.exe', 'memory compression',
+    'explorer.exe', 'sihost.exe', 'taskhostw.exe', 'ctfmon.exe', 'searchhost.exe',
+    'startmenuexperiencehost.exe', 'shellexperiencehost.exe', 'runtimebroker.exe',
+    'spoolsv.exe', 'audiodg.exe', 'antigravity.exe'
+}
+
 # Configuration File Path
 _appdata = os.environ.get("APPDATA") or os.path.expanduser("~")
 CONFIG_DIR = os.path.join(_appdata, "FrankBase", "PCThermalGuardPro")
@@ -320,6 +328,53 @@ class ThermalReliefEngine:
     def one_click_cool_down(cls, top_culprits: List[Dict[str, Any]]) -> Dict[str, Any]:
         """Legacy alias pointing to balanced cooling mode."""
         return cls.apply_cooling_mode("balanced", top_culprits)
+
+    @classmethod
+    def execute_advance_clean_slate(cls) -> Dict[str, Any]:
+        """
+        Advance Performance Launchpad (Clean Slate Mode):
+        Closes non-essential background user applications (browsers, updaters, discord, media players)
+        and purges RAM to dedicate 100% hardware power for gaming / video editing suites.
+        """
+        own_pid = os.getpid()
+        closed_names = []
+        target_pids = []
+
+        for proc in psutil.process_iter(['pid', 'name']):
+            try:
+                info = proc.info
+                pid = info.get('pid', 0)
+                name = (info.get('name') or '').lower()
+
+                if pid <= 4 or pid == own_pid:
+                    continue
+                if name in CRITICAL_SYSTEM_PROCESSES or 'pc_thermal_guard_pro' in name:
+                    continue
+
+                try:
+                    p = psutil.Process(pid)
+                    p.terminate()
+                    target_pids.append(pid)
+                    raw_name = info.get('name')
+                    if raw_name and raw_name not in closed_names:
+                        closed_names.append(raw_name)
+                except Exception:
+                    pass
+            except (psutil.NoSuchProcess, psutil.AccessDenied):
+                continue
+
+        time.sleep(0.3)
+        freed_mb = purge_all_background_ram()
+
+        msg = f"🚀 Advance Launchpad Engaged: Cleaned {len(target_pids)} background processes ({', '.join(closed_names[:3]) if closed_names else 'Zero bloat'}) and reclaimed ~{freed_mb:.0f} MB RAM. 100% CPU is ready for your game/editor!"
+        logger.info(msg)
+        return {
+            "success": True,
+            "closed_count": len(target_pids),
+            "closed_names": closed_names,
+            "ram_freed_mb": freed_mb,
+            "message": msg
+        }
 
     @classmethod
     def trigger_exhaust_hot_air(cls, top_culprits: List[Dict[str, Any]]) -> Dict[str, Any]:

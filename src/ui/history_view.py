@@ -221,10 +221,10 @@ class HistoryView(ctk.CTkFrame):
         header = ctk.CTkFrame(self.log_table_frame, fg_color=ThemeManager.get("bg_card_hover"), corner_radius=6)
         header.pack(fill="x", padx=4, pady=(2, 4))
 
-        cols = [("Time", 140), ("CPU Temp", 90), ("CPU Load", 90), ("GPU Temp", 90), ("Fan RPM", 90), ("Top Culprit", 140), ("Diagnosis", 100)]
+        cols = [("Time", 135), ("CPU Temp", 85), ("CPU Load", 85), ("GPU Temp", 85), ("Cooling / Fan", 95), ("Top Culprit", 140), ("Diagnosis", 90)]
         for name, width in cols:
             lbl = ctk.CTkLabel(header, text=name, font=ctk.CTkFont(size=11, weight="bold"), text_color=ThemeManager.get("text_muted"), width=width, anchor="w")
-            lbl.pack(side="left", padx=6, pady=4)
+            lbl.pack(side="left", padx=5, pady=4)
 
         records = self.history_manager.get_db_history(limit=50)
         if not records:
@@ -240,24 +240,34 @@ class HistoryView(ctk.CTkFrame):
             cpu_t = f"{r.get('cpu_temp', 0):.1f}°C"
             cpu_l = f"{r.get('cpu_load', 0):.1f}%"
             gpu_t = f"{r.get('gpu_temp', 0):.1f}°C"
-            fan = f"{r.get('fan_rpm', 0)} RPM"
+            fan_num = r.get('fan_rpm', 0)
+            fan_str = f"{fan_num} RPM" if fan_num > 0 else "Auto (EC)"
             culprit = f"{r.get('top_culprit', '')} ({r.get('top_has', 0):.0f}%)"
             diag = r.get("diag_status", "OPTIMAL")
 
             # Color for status
             diag_color = "#10b981" if diag == "OPTIMAL" else ("#ef4444" if diag == "CRITICAL" else "#f97316")
 
-            vals = [(t_str, 140, ThemeManager.get("text_secondary")), (cpu_t, 90, ThemeManager.get("text_primary")), (cpu_l, 90, ThemeManager.get("text_secondary")), (gpu_t, 90, ThemeManager.get("text_secondary")), (fan, 90, ThemeManager.get("text_secondary")), (culprit, 140, ThemeManager.get("text_primary")), (diag, 100, diag_color)]
+            vals = [(t_str, 135, ThemeManager.get("text_secondary")), (cpu_t, 85, ThemeManager.get("text_primary")), (cpu_l, 85, ThemeManager.get("text_secondary")), (gpu_t, 85, ThemeManager.get("text_secondary")), (fan_str, 95, ThemeManager.get("text_secondary")), (culprit, 140, ThemeManager.get("text_primary")), (diag, 90, diag_color)]
 
             for val, width, col in vals:
                 lbl = ctk.CTkLabel(row, text=val, font=ctk.CTkFont(size=11), text_color=col, width=width, anchor="w")
-                lbl.pack(side="left", padx=6, pady=3)
+                lbl.pack(side="left", padx=5, pady=3)
 
     def _on_export_json(self):
-        export_path = os.path.abspath("D:/02_Desktop_and_Mobile_Apps/PC_Thermal_Guard_Pro/Thermal_Diagnostic_Report.json")
-        success = self.history_manager.export_report_json(export_path)
-        if success and self.on_toast:
-            self.on_toast("Export Successful", f"Report saved to:\n{export_path}")
+        from tkinter import filedialog
+        desktop = os.path.expanduser("~/Desktop")
+        export_path = filedialog.asksaveasfilename(
+            title="Save Thermal Diagnostic Report",
+            initialdir=desktop,
+            initialfile="Thermal_Diagnostic_Report.json",
+            defaultextension=".json",
+            filetypes=[("JSON Files", "*.json"), ("All Files", "*.*")]
+        )
+        if export_path:
+            success = self.history_manager.export_report_json(export_path)
+            if success and self.on_toast:
+                self.on_toast("Export Successful", f"Report saved to:\n{export_path}")
 
     def apply_theme(self):
         bg_card = ThemeManager.get("bg_card")
