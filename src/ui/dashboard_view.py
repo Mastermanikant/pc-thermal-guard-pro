@@ -93,7 +93,7 @@ class DashboardView(ctk.CTkScrollableFrame):
 
         self.card_cpu = self._create_metric_card(self.gauges_frame, 0, "CPU TEMPERATURE", "24.0°C", "Peak: 26.0°C", NEON_GREEN)
         self.card_gpu = self._create_metric_card(self.gauges_frame, 1, "GPU TEMPERATURE", "22.0°C", "Load: 0%", NEON_CYAN)
-        self.card_fan = self._create_metric_card(self.gauges_frame, 2, "COOLING FAN", "0 RPM (Silent)", "Fan Stopped", NEON_CYAN)
+        self.card_fan = self._create_metric_card(self.gauges_frame, 2, "SYSTEM RAM USAGE", "0.0 GB (0%)", "Live Memory Footprint", NEON_CYAN)
         self.card_power = self._create_metric_card(self.gauges_frame, 3, "CPU POWER & CLOCK", "8.0 W", "2400 MHz", DYNAMIC_GRAY)
 
         # ── 2. Diagnostic Hero Card ──
@@ -323,12 +323,15 @@ class DashboardView(ctk.CTkScrollableFrame):
         self.card_gpu["val"].configure(text=f"{gpu_t:.1f}°C")
         self.card_gpu["sub"].configure(text=f"Load: {gpu_l:.0f}%")
 
+        ram_u = telemetry.get("ram_used_gb", 0.0)
+        ram_t = telemetry.get("ram_total_gb", 16.0)
+        ram_p = telemetry.get("ram_pct", 0)
+
+        self.card_fan["val"].configure(text=f"{ram_u:.1f} GB ({ram_p:.0f}%)")
         if fan_rpm > 0:
-            self.card_fan["val"].configure(text=f"{fan_rpm} RPM")
-            self.card_fan["sub"].configure(text="Hardware Direct Sensor")
+            self.card_fan["sub"].configure(text=f"Total: {ram_t:.0f}GB | Fan: {fan_rpm} RPM")
         else:
-            self.card_fan["val"].configure(text="0 RPM")
-            self.card_fan["sub"].configure(text=fan_status)
+            self.card_fan["sub"].configure(text=f"Total: {ram_t:.0f}GB | Fan: Silent / Standby")
 
         self.card_power["val"].configure(text=f"{pwr:.1f} W")
         self.card_power["sub"].configure(text=f"{freq:.0f} MHz")

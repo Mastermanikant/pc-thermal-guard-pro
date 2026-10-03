@@ -230,6 +230,11 @@ class HardwareSensorEngine:
 
         is_throttling = cpu_temp >= 90.0 or (cpu_load > 80.0 and cpu_freq_info and cpu_freq_info.max and cpu_freq < (cpu_freq_info.max * 0.65))
 
+        vmem = psutil.virtual_memory()
+        ram_used_gb = round(vmem.used / (1024 ** 3), 1)
+        ram_total_gb = round(vmem.total / (1024 ** 3), 1)
+        ram_pct = round(vmem.percent, 0)
+
         return {
             'cpu_temp': round(cpu_temp, 1),
             'cpu_temp_max': round(cpu_temp_max or cpu_temp, 1),
@@ -242,6 +247,9 @@ class HardwareSensorEngine:
             'gpu_power': round(gpu_power, 1),
             'fan_rpm': fan_rpm,
             'fan_status': fan_str,
+            'ram_used_gb': ram_used_gb,
+            'ram_total_gb': ram_total_gb,
+            'ram_pct': ram_pct,
             'mobo_temp': round(mobo_temp, 1),
             'is_throttling': is_throttling,
             'source': source,
