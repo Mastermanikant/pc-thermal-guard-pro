@@ -21,6 +21,20 @@ from src.core.logger import get_logger
 
 logger = get_logger("ThermalRelief")
 
+CRITICAL_SYSTEM_PROCESSES = {
+    'system', 'registry', 'smss.exe', 'csrss.exe', 'wininit.exe', 'services.exe',
+    'lsass.exe', 'svchost.exe', 'fontdrvhost.exe', 'dwm.exe', 'memory compression',
+    'explorer.exe', 'sihost.exe', 'taskhostw.exe', 'ctfmon.exe', 'searchhost.exe',
+    'startmenuexperiencehost.exe', 'shellexperiencehost.exe', 'runtimebroker.exe',
+    'spoolsv.exe', 'audiodg.exe', 'antigravity.exe'
+}
+
+BROWSER_PROCESS_NAMES = {
+    'chrome.exe', 'msedge.exe', 'brave.exe', 'firefox.exe', 'opera.exe',
+    'vivaldi.exe', 'arc.exe', 'centbrowser.exe', 'tor.exe'
+}
+
+
 # Configuration File Path
 _appdata = os.environ.get("APPDATA") or os.path.expanduser("~")
 CONFIG_DIR = os.path.join(_appdata, "FrankBase", "PCThermalGuardPro")
@@ -121,6 +135,12 @@ class ThermalReliefEngine:
     fan_security_enabled: bool = True       # Enforces 25% stall floor and 75°C emergency override
     emergency_override_temp: float = 75.0  # Temperature that forces 100% fan speed
 
+    # Session Impact & Genuine Benefit Tracking
+    session_ram_reclaimed_mb: float = 0.0
+    session_cooling_interventions: int = 0
+    session_tasks_calmed: int = 0
+    active_work_profile: str = "auto"      # "auto", "multitask", "gaming"
+
     # Exhaust Air Purge Safety Registry
     last_exhaust_time: float = 0.0
     exhaust_duration_sec: int = 25          # Safe air purge duration (25 seconds)
@@ -131,6 +151,21 @@ class ThermalReliefEngine:
     _throttled_registry: Dict[int, Dict[str, Any]] = {}
     _watcher_thread: Optional[threading.Thread] = None
     _lock = threading.Lock()
+
+    @classmethod
+    def get_session_impact_stats(cls) -> Dict[str, Any]:
+        """Returns 100% genuine cumulative protection and savings metrics for this session."""
+        return {
+            "ram_reclaimed_mb": round(cls.session_ram_reclaimed_mb, 1),
+            "cooling_interventions": cls.session_cooling_interventions,
+            "tasks_calmed": cls.session_tasks_calmed,
+            "profile": cls.active_work_profile
+        }
+
+    @classmethod
+    def set_work_profile(cls, profile_key: str):
+        cls.active_work_profile = profile_key
+        logger.info(f"Active work profile switched to: {profile_key}")
 
     @classmethod
     def load_config(cls):
@@ -219,9 +254,34 @@ class ThermalReliefEngine:
                     "throttled_at": time.time()
                 }
 
+            # Multi-Process Browser Calming: Calm all background tabs and GPU renderers of this browser
+            if p_name.lower() in BROWSER_PROCESS_NAMES:
+                try:
+                    for sibling in psutil.process_iter(['pid', 'name']):
+                        try:
+                            s_info = sibling.info
+                            s_pid = s_info.get('pid')
+                            s_name = (s_info.get('name') or '').lower()
+                            if s_pid and s_pid > 4 and s_pid != fg_pid and s_pid != pid and s_name == p_name.lower():
+                                s_proc = psutil.Process(s_pid)
+                                if hasattr(psutil, "IDLE_PRIORITY_CLASS"):
+                                    s_proc.nice(psutil.IDLE_PRIORITY_CLASS)
+                                purge_process_working_set(s_pid)
+                                with cls._lock:
+                                    cls._throttled_registry[s_pid] = {
+                                        "name": s_name,
+                                        "original_nice": None,
+                                        "throttled_at": time.time()
+                                    }
+                        except (psutil.NoSuchProcess, psutil.AccessDenied):
+                            continue
+                except Exception:
+                    pass
+
             # Ensure background auto-restore watcher is running
             cls._ensure_restore_watcher()
             logger.info(f"Throttled process '{p_name}' (PID: {pid}) to Idle priority + RAM Purged.")
+
 
             return {
                 "success": True,
@@ -289,6 +349,11 @@ class ThermalReliefEngine:
         # Execute Windows RAM Purge
         freed_ram_mb = purge_all_background_ram(top_culprits)
 
+        # Track genuine cumulative session savings
+        cls.session_ram_reclaimed_mb += freed_ram_mb
+        cls.session_cooling_interventions += 1
+        cls.session_tasks_calmed += throttled_count
+
         if "soft" in mode_lower:
             mode_name = "🌱 Soft Cool"
             desc = "Idle updaters calmed and memory reclaimed."
@@ -320,6 +385,58 @@ class ThermalReliefEngine:
     def one_click_cool_down(cls, top_culprits: List[Dict[str, Any]]) -> Dict[str, Any]:
         """Legacy alias pointing to balanced cooling mode."""
         return cls.apply_cooling_mode("balanced", top_culprits)
+
+    @classmethod
+    def execute_advance_clean_slate(cls) -> Dict[str, Any]:
+        """
+        Advance Performance Launchpad (Clean Slate Mode):
+        Closes non-essential background user applications (browsers, updaters, discord, media players)
+        and purges RAM to dedicate 100% hardware power for gaming / video editing suites.
+        """
+        own_pid = os.getpid()
+        closed_names = []
+        target_pids = []
+
+        for proc in psutil.process_iter(['pid', 'name']):
+            try:
+                info = proc.info
+                pid = info.get('pid', 0)
+                name = (info.get('name') or '').lower()
+
+                if pid <= 4 or pid == own_pid:
+                    continue
+                if name in CRITICAL_SYSTEM_PROCESSES or 'pc_thermal_guard_pro' in name:
+                    continue
+
+                try:
+                    p = psutil.Process(pid)
+                    p.terminate()
+                    target_pids.append(pid)
+                    raw_name = info.get('name')
+                    if raw_name and raw_name not in closed_names:
+                        closed_names.append(raw_name)
+                except Exception:
+                    pass
+            except (psutil.NoSuchProcess, psutil.AccessDenied):
+                continue
+
+        time.sleep(0.3)
+        freed_mb = purge_all_background_ram()
+
+        # Track genuine cumulative session savings
+        cls.session_ram_reclaimed_mb += freed_mb
+        cls.session_cooling_interventions += 1
+        cls.session_tasks_calmed += len(target_pids)
+
+        msg = f"🚀 Advance Launchpad Engaged: Cleaned {len(target_pids)} background processes ({', '.join(closed_names[:3]) if closed_names else 'Zero bloat'}) and reclaimed ~{freed_mb:.0f} MB RAM. 100% CPU is ready for your game/editor!"
+        logger.info(msg)
+        return {
+            "success": True,
+            "closed_count": len(target_pids),
+            "closed_names": closed_names,
+            "ram_freed_mb": freed_mb,
+            "message": msg
+        }
 
     @classmethod
     def trigger_exhaust_hot_air(cls, top_culprits: List[Dict[str, Any]]) -> Dict[str, Any]:

@@ -29,6 +29,12 @@ CRITICAL_SYSTEM_PROCESSES = {
     'spoolsv.exe', 'audiodg.exe', 'antigravity.exe'
 }
 
+BROWSER_PROCESS_NAMES = {
+    'chrome.exe', 'msedge.exe', 'brave.exe', 'firefox.exe', 'opera.exe',
+    'vivaldi.exe', 'arc.exe', 'centbrowser.exe', 'tor.exe'
+}
+
+
 # Configuration File Path
 _appdata = os.environ.get("APPDATA") or os.path.expanduser("~")
 CONFIG_DIR = os.path.join(_appdata, "FrankBase", "PCThermalGuardPro")
@@ -248,9 +254,34 @@ class ThermalReliefEngine:
                     "throttled_at": time.time()
                 }
 
+            # Multi-Process Browser Calming: Calm all background tabs and GPU renderers of this browser
+            if p_name.lower() in BROWSER_PROCESS_NAMES:
+                try:
+                    for sibling in psutil.process_iter(['pid', 'name']):
+                        try:
+                            s_info = sibling.info
+                            s_pid = s_info.get('pid')
+                            s_name = (s_info.get('name') or '').lower()
+                            if s_pid and s_pid > 4 and s_pid != fg_pid and s_pid != pid and s_name == p_name.lower():
+                                s_proc = psutil.Process(s_pid)
+                                if hasattr(psutil, "IDLE_PRIORITY_CLASS"):
+                                    s_proc.nice(psutil.IDLE_PRIORITY_CLASS)
+                                purge_process_working_set(s_pid)
+                                with cls._lock:
+                                    cls._throttled_registry[s_pid] = {
+                                        "name": s_name,
+                                        "original_nice": None,
+                                        "throttled_at": time.time()
+                                    }
+                        except (psutil.NoSuchProcess, psutil.AccessDenied):
+                            continue
+                except Exception:
+                    pass
+
             # Ensure background auto-restore watcher is running
             cls._ensure_restore_watcher()
             logger.info(f"Throttled process '{p_name}' (PID: {pid}) to Idle priority + RAM Purged.")
+
 
             return {
                 "success": True,

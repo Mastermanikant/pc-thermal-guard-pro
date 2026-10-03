@@ -32,23 +32,21 @@ class HistoryView(ctk.CTkFrame):
 
         self.chart_title = ctk.CTkLabel(
             self.chart_header,
-            text="📈 Live 60-Minute Thermal Timeline",
+            text="📈 Live Workload & CPU Power Timeline (Dynamic Telemetry)",
             font=ctk.CTkFont(size=14, weight="bold"),
             text_color=ThemeManager.get("text_primary")
         )
         self.chart_title.pack(side="left")
 
-        # High-Contrast Colored Legend Badges
+        # High-Contrast Colored Legend Badges for 2 Dynamic Metrics
         legend_box = ctk.CTkFrame(self.chart_header, fg_color="transparent")
         legend_box.pack(side="right")
 
-        ctk.CTkLabel(legend_box, text="🟦 CPU Temp (°C)", font=ctk.CTkFont(size=11, weight="bold"), text_color="#00e5ff").pack(side="left", padx=4)
+        ctk.CTkLabel(legend_box, text="🟨 CPU Workload (%)", font=ctk.CTkFont(size=11, weight="bold"), text_color="#eab308").pack(side="left", padx=4)
         ctk.CTkLabel(legend_box, text="|", font=ctk.CTkFont(size=11), text_color="#555555").pack(side="left", padx=2)
-        ctk.CTkLabel(legend_box, text="🟨 CPU Load (%)", font=ctk.CTkFont(size=11, weight="bold"), text_color="#eab308").pack(side="left", padx=4)
+        ctk.CTkLabel(legend_box, text="⚡ CPU Power (Watts)", font=ctk.CTkFont(size=11, weight="bold"), text_color="#00e5ff").pack(side="left", padx=4)
         ctk.CTkLabel(legend_box, text="|", font=ctk.CTkFont(size=11), text_color="#555555").pack(side="left", padx=2)
-        ctk.CTkLabel(legend_box, text="🟧 70°C Limit", font=ctk.CTkFont(size=10), text_color="#f97316").pack(side="left", padx=4)
-        ctk.CTkLabel(legend_box, text="|", font=ctk.CTkFont(size=11), text_color="#555555").pack(side="left", padx=2)
-        ctk.CTkLabel(legend_box, text="🟥 85°C Overheat", font=ctk.CTkFont(size=10), text_color="#ef4444").pack(side="left", padx=4)
+        ctk.CTkLabel(legend_box, text="🟧 80% Load Peak", font=ctk.CTkFont(size=10), text_color="#f97316").pack(side="left", padx=4)
 
         # Native Visual Canvas for Chart (High-speed, zero VRAM)
         self.canvas_card = ctk.CTkFrame(
@@ -130,7 +128,7 @@ class HistoryView(ctk.CTkFrame):
         self.update_chart()
 
     def update_chart(self):
-        """Draws real-time temperature curve onto canvas with 1-second rate limiting to prevent UI lockup."""
+        """Draws real-time dynamic workload and power curves with linear precision."""
         now = time.time()
         if now - self._last_chart_draw < 1.0:
             return
@@ -149,68 +147,95 @@ class HistoryView(ctk.CTkFrame):
         grid_col = ThemeManager.get("border")
         canvas.configure(bg=bg_card)
 
-        # Draw Grid Lines & Thresholds
-        # 100°C (top = 10px), 85°C, 70°C, 50°C, 30°C (bottom = h - 20px)
-        t_max = 100.0
-        t_min = 30.0
+        # <!-- ================= Section: Clean Scale & Grid Lines ================= -->
+        def scale_to_y(val, max_scale=100.0):
+            ratio = max(0.0, min(1.0, val / max_scale))
+            return h - 25 - (ratio * (h - 45))
 
-        def temp_to_y(temp):
-            ratio = max(0.0, min(1.0, (temp - t_min) / (t_max - t_min)))
-            return h - 20 - (ratio * (h - 35))
+        # Threshold line: 80% Heavy Load Peak
+        y80 = scale_to_y(80.0, 100.0)
+        canvas.create_line(45, y80, w - 15, y80, fill="#f97316", dash=(4, 4), width=1)
+        canvas.create_text(25, y80, text="80%", fill="#f97316", font=("Segoe UI", 9, "bold"))
 
-        # Threshold line 85°C (Overheat Alert)
-        y85 = temp_to_y(85.0)
-        canvas.create_line(40, y85, w - 10, y85, fill="#ef4444", dash=(4, 4), width=1)
-        canvas.create_text(25, y85, text="85°C", fill="#ef4444", font=("Segoe UI", 9))
+        # Threshold line: 40% Moderate Load
+        y40 = scale_to_y(40.0, 100.0)
+        canvas.create_line(45, y40, w - 15, y40, fill=grid_col, dash=(1, 5), width=1)
+        canvas.create_text(25, y40, text="40%", fill=ThemeManager.get("text_muted"), font=("Segoe UI", 9))
 
-        # Threshold line 70°C (Caution)
-        y70 = temp_to_y(70.0)
-        canvas.create_line(40, y70, w - 10, y70, fill="#f97316", dash=(2, 4), width=1)
-        canvas.create_text(25, y70, text="70°C", fill="#f97316", font=("Segoe UI", 9))
+        # Baseline: 0% / 0W
+        y0 = scale_to_y(0.0, 100.0)
+        canvas.create_line(45, y0, w - 15, y0, fill=grid_col, width=1)
+        canvas.create_text(25, y0, text="0%", fill=ThemeManager.get("text_muted"), font=("Segoe UI", 9))
 
-        # Baseline 40°C
-        y40 = temp_to_y(40.0)
-        canvas.create_line(40, y40, w - 10, y40, fill=grid_col, dash=(1, 5), width=1)
-        canvas.create_text(25, y40, text="40°C", fill=ThemeManager.get("text_muted"), font=("Segoe UI", 9))
+        # Time Scale Axis at Bottom
+        y_axis = h - 18
+        canvas.create_line(45, y_axis, w - 15, y_axis, fill=grid_col, width=1)
+        canvas.create_text(50, y_axis + 10, text="-60m", fill=ThemeManager.get("text_muted"), font=("Segoe UI", 8))
+        canvas.create_text((w + 30) // 2, y_axis + 10, text="-30m", fill=ThemeManager.get("text_muted"), font=("Segoe UI", 8))
+        canvas.create_text(w - 25, y_axis + 10, text="Now", fill=ThemeManager.get("text_muted"), font=("Segoe UI", 8, "bold"))
 
         if not samples:
-            canvas.create_text(w / 2, h / 2, text="Sampling real-time telemetry...", fill=ThemeManager.get("text_muted"), font=("Segoe UI", 11))
+            canvas.create_text(w / 2, h / 2, text="Sampling real-time workload & power data...", fill=ThemeManager.get("text_muted"), font=("Segoe UI", 11))
             return
 
-        # Take last 60 samples or scale
+        # Take last 60 samples
         n_samples = min(len(samples), 60)
         recent = samples[-n_samples:]
-        step_x = (w - 60) / max(1, n_samples - 1)
+        step_x = (w - 70) / max(1, n_samples - 1)
 
-        # Plot CPU Temp Line
-        points_temp = []
+        # 3-Point Moving Average for CPU Load
+        smoothed_loads = []
+        for i in range(len(recent)):
+            if i == 0:
+                smoothed_loads.append(recent[i].get("cpu_load", 0.0))
+            elif i == 1:
+                smoothed_loads.append((recent[i - 1].get("cpu_load", 0.0) + recent[i].get("cpu_load", 0.0)) / 2.0)
+            else:
+                val = (recent[i - 2].get("cpu_load", 0.0) * 0.20 +
+                       recent[i - 1].get("cpu_load", 0.0) * 0.30 +
+                       recent[i].get("cpu_load", 0.0) * 0.50)
+                smoothed_loads.append(val)
+
+        # <!-- ================= Section: Plotting 2 Dynamic Curves ================= -->
         points_load = []
+        points_power = []
 
-        for idx, s in enumerate(recent):
-            x = 45 + (idx * step_x)
-            yt = temp_to_y(s.get("cpu_temp", 45.0))
-            points_temp.append((x, yt))
+        for idx in range(len(recent)):
+            s = recent[idx]
+            x = 48 + (idx * step_x)
 
-            # CPU Load mapped to 0-100%
-            load = s.get("cpu_load", 0.0)
-            yl = h - 20 - ((load / 100.0) * (h - 35))
+            # 1. CPU Load % (0 to 100%)
+            load_val = smoothed_loads[idx]
+            yl = scale_to_y(load_val, 100.0)
             points_load.append((x, yl))
 
-        # Draw CPU Load line (Yellow)
+            # 2. CPU Package Power in Watts (0 to 45W max scale for dynamic visibility)
+            pwr_val = s.get("cpu_power", 5.0)
+            yp = scale_to_y(pwr_val, 45.0)
+            points_power.append((x, yp))
+
+        # Draw CPU Package Power line (Neon Cyan - Watts)
+        if len(points_power) > 1:
+            flat_power = [coord for pt in points_power for coord in pt]
+            canvas.create_line(flat_power, fill="#00e5ff", width=2, smooth=False)
+
+        # Draw CPU Workload line (Yellow - Load %)
         if len(points_load) > 1:
             flat_load = [coord for pt in points_load for coord in pt]
-            canvas.create_line(flat_load, fill="#eab308", width=1, smooth=True)
+            canvas.create_line(flat_load, fill="#eab308", width=2, smooth=False)
 
-        # Draw CPU Temp line (Sky Blue)
-        if len(points_temp) > 1:
-            flat_temp = [coord for pt in points_temp for coord in pt]
-            canvas.create_line(flat_temp, fill=ThemeManager.get("chart_line"), width=2, smooth=True)
+        # Latest Value Badges on rightmost point
+        last_x, last_y_load = points_load[-1]
+        _, last_y_pwr = points_power[-1]
 
-        # Latest Temp Badge on last point
-        last_x, last_y = points_temp[-1]
-        last_temp = recent[-1].get("cpu_temp", 45.0)
-        canvas.create_oval(last_x - 4, last_y - 4, last_x + 4, last_y + 4, fill=ThemeManager.get("chart_line"), outline="#ffffff")
-        canvas.create_text(last_x, last_y - 12, text=f"{last_temp:.1f}°C", fill=ThemeManager.get("text_primary"), font=("Segoe UI", 10, "bold"))
+        last_load = smoothed_loads[-1]
+        last_pwr = recent[-1].get("cpu_power", 5.0)
+
+        canvas.create_oval(last_x - 4, last_y_load - 4, last_x + 4, last_y_load + 4, fill="#eab308", outline="#ffffff")
+        canvas.create_text(last_x, max(12, last_y_load - 12), text=f"{last_load:.0f}%", fill="#eab308", font=("Segoe UI", 9, "bold"))
+
+        canvas.create_oval(last_x - 4, last_y_pwr - 4, last_x + 4, last_y_pwr + 4, fill="#00e5ff", outline="#ffffff")
+        canvas.create_text(last_x, min(h - 30, last_y_pwr + 12), text=f"{last_pwr:.1f}W", fill="#00e5ff", font=("Segoe UI", 9, "bold"))
 
     def refresh_log_table(self):
         """Refreshes the SQLite telemetry table."""
@@ -221,10 +246,10 @@ class HistoryView(ctk.CTkFrame):
         header = ctk.CTkFrame(self.log_table_frame, fg_color=ThemeManager.get("bg_card_hover"), corner_radius=6)
         header.pack(fill="x", padx=4, pady=(2, 4))
 
-        cols = [("Time", 140), ("CPU Temp", 90), ("CPU Load", 90), ("GPU Temp", 90), ("Fan RPM", 90), ("Top Culprit", 140), ("Diagnosis", 100)]
+        cols = [("Time", 135), ("CPU Temp", 85), ("CPU Load", 85), ("GPU Temp", 85), ("Cooling / Fan", 95), ("Top Culprit", 140), ("Diagnosis", 90)]
         for name, width in cols:
             lbl = ctk.CTkLabel(header, text=name, font=ctk.CTkFont(size=11, weight="bold"), text_color=ThemeManager.get("text_muted"), width=width, anchor="w")
-            lbl.pack(side="left", padx=6, pady=4)
+            lbl.pack(side="left", padx=5, pady=4)
 
         records = self.history_manager.get_db_history(limit=50)
         if not records:
@@ -240,24 +265,43 @@ class HistoryView(ctk.CTkFrame):
             cpu_t = f"{r.get('cpu_temp', 0):.1f}°C"
             cpu_l = f"{r.get('cpu_load', 0):.1f}%"
             gpu_t = f"{r.get('gpu_temp', 0):.1f}°C"
-            fan = f"{r.get('fan_rpm', 0)} RPM"
+            fan_num = r.get('fan_rpm', 0)
+            fan_str = f"{fan_num} RPM" if fan_num > 0 else "Auto (EC)"
             culprit = f"{r.get('top_culprit', '')} ({r.get('top_has', 0):.0f}%)"
             diag = r.get("diag_status", "OPTIMAL")
 
-            # Color for status
-            diag_color = "#10b981" if diag == "OPTIMAL" else ("#ef4444" if diag == "CRITICAL" else "#f97316")
+            # Color mapping for scientific statuses
+            if diag == "OPTIMAL":
+                diag_color = "#10b981"
+            elif "HEAVY" in diag:
+                diag_color = "#eab308"
+            elif "ELEVATED" in diag:
+                diag_color = "#f97316"
+            elif "OVERHEAT" in diag or "CRITICAL" in diag:
+                diag_color = "#ef4444"
+            else:
+                diag_color = "#00e5ff"
 
-            vals = [(t_str, 140, ThemeManager.get("text_secondary")), (cpu_t, 90, ThemeManager.get("text_primary")), (cpu_l, 90, ThemeManager.get("text_secondary")), (gpu_t, 90, ThemeManager.get("text_secondary")), (fan, 90, ThemeManager.get("text_secondary")), (culprit, 140, ThemeManager.get("text_primary")), (diag, 100, diag_color)]
+            vals = [(t_str, 135, ThemeManager.get("text_secondary")), (cpu_t, 85, ThemeManager.get("text_primary")), (cpu_l, 85, ThemeManager.get("text_secondary")), (gpu_t, 85, ThemeManager.get("text_secondary")), (fan_str, 95, ThemeManager.get("text_secondary")), (culprit, 140, ThemeManager.get("text_primary")), (diag, 110, diag_color)]
 
             for val, width, col in vals:
                 lbl = ctk.CTkLabel(row, text=val, font=ctk.CTkFont(size=11), text_color=col, width=width, anchor="w")
-                lbl.pack(side="left", padx=6, pady=3)
+                lbl.pack(side="left", padx=5, pady=3)
 
     def _on_export_json(self):
-        export_path = os.path.abspath("D:/02_Desktop_and_Mobile_Apps/PC_Thermal_Guard_Pro/Thermal_Diagnostic_Report.json")
-        success = self.history_manager.export_report_json(export_path)
-        if success and self.on_toast:
-            self.on_toast("Export Successful", f"Report saved to:\n{export_path}")
+        from tkinter import filedialog
+        desktop = os.path.expanduser("~/Desktop")
+        export_path = filedialog.asksaveasfilename(
+            title="Save Thermal Diagnostic Report",
+            initialdir=desktop,
+            initialfile="Thermal_Diagnostic_Report.json",
+            defaultextension=".json",
+            filetypes=[("JSON Files", "*.json"), ("All Files", "*.*")]
+        )
+        if export_path:
+            success = self.history_manager.export_report_json(export_path)
+            if success and self.on_toast:
+                self.on_toast("Export Successful", f"Report saved to:\n{export_path}")
 
     def apply_theme(self):
         bg_card = ThemeManager.get("bg_card")
