@@ -61,8 +61,8 @@ class MainWindow(ctk.CTk):
         self.active_view_key = "Dashboard"
         self.views = {}
 
-        # Thread-safe UI update queue
-        self.telemetry_queue = queue.Queue(maxsize=10)
+        # Thread-safe UI update queue (lean maxsize to prevent backlog starvation)
+        self.telemetry_queue = queue.Queue(maxsize=2)
         self._stop_event = threading.Event()
 
         self._build_layout()

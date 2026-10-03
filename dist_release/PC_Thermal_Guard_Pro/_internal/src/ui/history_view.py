@@ -28,21 +28,27 @@ class HistoryView(ctk.CTkFrame):
         self.chart_header = ctk.CTkFrame(self, fg_color="transparent")
         self.chart_header.pack(fill="x", padx=10, pady=(0, 6))
 
+        self._last_chart_draw = 0.0
+
         self.chart_title = ctk.CTkLabel(
             self.chart_header,
-            text="📈 Live 60-Minute Thermal Timeline (In-Memory Ring Buffer)",
+            text="📈 Live 60-Minute Thermal Timeline",
             font=ctk.CTkFont(size=14, weight="bold"),
             text_color=ThemeManager.get("text_primary")
         )
         self.chart_title.pack(side="left")
 
-        self.chart_legend = ctk.CTkLabel(
-            self.chart_header,
-            text="🔵 CPU Temp  |  🟡 CPU Load %  |  ── 70°C Caution  |  ── 85°C Overheat",
-            font=ctk.CTkFont(size=11),
-            text_color=ThemeManager.get("text_muted")
-        )
-        self.chart_legend.pack(side="right")
+        # High-Contrast Colored Legend Badges
+        legend_box = ctk.CTkFrame(self.chart_header, fg_color="transparent")
+        legend_box.pack(side="right")
+
+        ctk.CTkLabel(legend_box, text="🟦 CPU Temp (°C)", font=ctk.CTkFont(size=11, weight="bold"), text_color="#00e5ff").pack(side="left", padx=4)
+        ctk.CTkLabel(legend_box, text="|", font=ctk.CTkFont(size=11), text_color="#555555").pack(side="left", padx=2)
+        ctk.CTkLabel(legend_box, text="🟨 CPU Load (%)", font=ctk.CTkFont(size=11, weight="bold"), text_color="#eab308").pack(side="left", padx=4)
+        ctk.CTkLabel(legend_box, text="|", font=ctk.CTkFont(size=11), text_color="#555555").pack(side="left", padx=2)
+        ctk.CTkLabel(legend_box, text="🟧 70°C Limit", font=ctk.CTkFont(size=10), text_color="#f97316").pack(side="left", padx=4)
+        ctk.CTkLabel(legend_box, text="|", font=ctk.CTkFont(size=11), text_color="#555555").pack(side="left", padx=2)
+        ctk.CTkLabel(legend_box, text="🟥 85°C Overheat", font=ctk.CTkFont(size=10), text_color="#ef4444").pack(side="left", padx=4)
 
         # Native Visual Canvas for Chart (High-speed, zero VRAM)
         self.canvas_card = ctk.CTkFrame(
@@ -124,7 +130,12 @@ class HistoryView(ctk.CTkFrame):
         self.update_chart()
 
     def update_chart(self):
-        """Draws real-time temperature curve onto canvas."""
+        """Draws real-time temperature curve onto canvas with 1-second rate limiting to prevent UI lockup."""
+        now = time.time()
+        if now - self._last_chart_draw < 1.0:
+            return
+        self._last_chart_draw = now
+
         samples = self.history_manager.get_recent_ring_buffer()
         canvas = self.chart_canvas
         w = canvas.winfo_width()
@@ -252,12 +263,10 @@ class HistoryView(ctk.CTkFrame):
         bg_card = ThemeManager.get("bg_card")
         border = ThemeManager.get("border")
         txt_p = ThemeManager.get("text_primary")
-        txt_m = ThemeManager.get("text_muted")
 
         self.canvas_card.configure(fg_color=bg_card, border_color=border)
         self.log_table_frame.configure(fg_color=bg_card, border_color=border)
         self.chart_title.configure(text_color=txt_p)
-        self.chart_legend.configure(text_color=txt_m)
         self.log_title.configure(text_color=txt_p)
         self.btn_export_json.configure(fg_color=ThemeManager.get("bg_card_hover"), text_color=txt_p)
         self.btn_refresh_log.configure(fg_color=ThemeManager.get("bg_card_hover"), text_color=txt_p)
