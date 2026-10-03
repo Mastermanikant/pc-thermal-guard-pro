@@ -327,7 +327,9 @@ class DashboardView(ctk.CTkScrollableFrame):
             hint = "💡 Multitasking Mode: Maximum tolerance for background downloads, music and cloud syncs."
         elif "Game" in val:
             profile_key = "gaming"
-            hint = "💡 Game / Studio Focus: Directs 100% compute to active window. Silences all background updaters."
+            hint = "💡 Game / Studio Focus: Directs 100% compute to active window. Silences background updaters."
+            # Automatically apply cooling and memory flush for instant performance boost
+            ThermalReliefEngine.apply_cooling_mode("deep", self.top_culprits_cache)
         else:
             profile_key = "auto"
             hint = "💡 Auto-Pilot: Intelligently steps in only during actual heat bursts. Never disturbs your active work."
@@ -336,6 +338,7 @@ class DashboardView(ctk.CTkScrollableFrame):
         ThermalReliefEngine.set_work_profile(profile_key)
         if self.on_toast:
             self.on_toast("🎯 Work Profile", f"Profile active: {val}")
+
 
     def _on_elevate_admin(self):
         restart_as_admin()

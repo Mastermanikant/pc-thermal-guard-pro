@@ -39,9 +39,10 @@ class CollapsibleSidebar(ctk.CTkFrame):
         items = [
             ("Dashboard", "1. ⚡ Live Dashboard"),
             ("History", "2. 📈 Visual History"),
-            ("Cooling", "3. 🛡️ Smart Cooling"),
+            ("Cooling", "3. ⚙️ Settings & Cooling"),
             ("License", "4. 🔑 License & Support"),
         ]
+
 
         for key, label in items:
             btn = ctk.CTkButton(
