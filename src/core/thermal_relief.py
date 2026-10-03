@@ -259,19 +259,22 @@ class ThermalReliefEngine:
             return False
 
     @classmethod
-    def one_click_cool_down(cls, top_culprits: List[Dict[str, Any]]) -> Dict[str, Any]:
+    def apply_cooling_mode(cls, mode: str, top_culprits: List[Dict[str, Any]]) -> Dict[str, Any]:
         """
-        Smart 1-Click Cool Down & RAM Purge:
-        1. Throttles top background culprits to IDLE priority while protecting active window.
-        2. Reclaims unused RAM pages across processes via Windows psapi.EmptyWorkingSet.
+        Executes one of 3 honest cooling modes:
+        - 'soft': Cleans background RAM and idles inactive updater processes without affecting multitasking.
+        - 'balanced': Throttles top background CPU spikes while protecting active foreground work. (Recommended)
+        - 'deep': Emergency thermal relief throttling all background non-system processes.
         """
+        mode_lower = mode.lower()
         throttled_count = 0
         details = []
         skipped_fg = []
-
         fg_pid = get_foreground_process_id()
 
-        for item in top_culprits[:4]:
+        target_count = 2 if "soft" in mode_lower else (4 if "balanced" in mode_lower else 8)
+
+        for item in top_culprits[:target_count]:
             pid = item.get("pid")
             if pid and pid > 4:
                 if fg_pid and pid == fg_pid:
@@ -286,23 +289,37 @@ class ThermalReliefEngine:
         # Execute Windows RAM Purge
         freed_ram_mb = purge_all_background_ram(top_culprits)
 
-        if throttled_count > 0:
-            msg = f"⚡ Cool Down & RAM Purge Active: Throttled {throttled_count} background tasks ({', '.join(details)}) & Reclaimed ~{freed_ram_mb:.0f} MB RAM. Auto-restores when CPU <{cls.restore_target_temp:.0f}°C or {cls.restore_timeout_sec}s."
-            if skipped_fg:
-                msg += f" (Protected active app: {', '.join(skipped_fg)})"
+        if "soft" in mode_lower:
+            mode_name = "🌱 Soft Cool"
+            desc = "Idle updaters calmed and memory reclaimed."
+        elif "deep" in mode_lower:
+            mode_name = "❄️ Deep Cool"
+            desc = "All background load locked to low power."
         else:
-            if skipped_fg:
-                msg = f"⚡ RAM Purge Active: Reclaimed ~{freed_ram_mb:.0f} MB RAM. (High CPU is from active app: {', '.join(skipped_fg)})"
-            else:
-                msg = f"⚡ RAM Purge Active: Reclaimed ~{freed_ram_mb:.0f} MB RAM. Background thermal load is optimal."
+            mode_name = "⚡ Balanced Cool"
+            desc = "Top background spikes calmed while protecting active work."
 
-        logger.info(f"1-Click Cool Down & RAM Purge executed: {msg}")
+        if throttled_count > 0:
+            msg = f"{mode_name} Active: Calmed {throttled_count} background tasks ({', '.join(details[:3])}) and freed ~{freed_ram_mb:.0f} MB RAM. Note: Physical heatsink will dissipate heat naturally over 1 to 3 minutes."
+        else:
+            msg = f"{mode_name} Active: Freed ~{freed_ram_mb:.0f} MB RAM. Background CPU load is already quiet."
+
+        if skipped_fg:
+            msg += f" [Protected Active App: {', '.join(skipped_fg)}]"
+
+        logger.info(f"{mode_name} executed: {msg}")
         return {
             "success": True,
+            "mode": mode,
             "throttled_count": throttled_count,
             "ram_freed_mb": freed_ram_mb,
             "message": msg
         }
+
+    @classmethod
+    def one_click_cool_down(cls, top_culprits: List[Dict[str, Any]]) -> Dict[str, Any]:
+        """Legacy alias pointing to balanced cooling mode."""
+        return cls.apply_cooling_mode("balanced", top_culprits)
 
     @classmethod
     def trigger_exhaust_hot_air(cls, top_culprits: List[Dict[str, Any]]) -> Dict[str, Any]:

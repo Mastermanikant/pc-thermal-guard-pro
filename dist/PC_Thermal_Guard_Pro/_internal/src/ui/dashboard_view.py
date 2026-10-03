@@ -9,7 +9,6 @@ from typing import Dict, Any, List, Callable
 from src.ui.theme import ThemeManager, NEON_CYAN, NEON_MAGENTA, NEON_GREEN, BG_COLOR, FRAME_BG, BORDER_COLOR, TEXT_COLOR, DYNAMIC_GRAY
 from src.core.thermal_relief import ThermalReliefEngine, purge_all_background_ram
 from src.core.hardware_sensor import restart_as_admin, is_admin
-from src.ui.ecosystem_card import EcosystemBannerCard
 
 class DashboardView(ctk.CTkScrollableFrame):
     def __init__(self, master, on_toast: Callable[[str, str], None] = None, on_cool_down_callback: Callable[[], None] = None, **kwargs):
@@ -24,14 +23,14 @@ class DashboardView(ctk.CTkScrollableFrame):
         self.on_toast = on_toast
         self.on_cool_down_callback = on_cool_down_callback
         self.top_culprits_cache: List[Dict[str, Any]] = []
-        self.stats_expanded = True
         self.culprit_rows = []
         self.is_elevated = is_admin()
+        self.cooling_mode_var = ctk.StringVar(value="⚡ Balanced (Recommended)")
 
         self._build_ui()
 
     def _build_ui(self):
-        # ── 1. Top Section: Global Thermal Stats & Telemetry ──
+        # ── 1. Top Section: 3 High-Precision Live Metric Cards ──
         self.stats_card = ctk.CTkFrame(self, fg_color=FRAME_BG, corner_radius=8, border_width=1, border_color=BORDER_COLOR)
         self.stats_card.pack(fill="x", padx=10, pady=(10, 8))
 
@@ -40,16 +39,15 @@ class DashboardView(ctk.CTkScrollableFrame):
 
         ctk.CTkLabel(
             stats_hdr,
-            text="📊 Live Hardware Sensors & Telemetry",
+            text="📊 Live System Hardware Telemetry",
             font=ctk.CTkFont(size=14, weight="bold"),
             text_color=TEXT_COLOR
         ).pack(side="left")
 
-        # Admin Elevation / Sensor Status Badge
         if not self.is_elevated:
             self.btn_admin_badge = ctk.CTkButton(
                 stats_hdr,
-                text="🛡️ Run as Admin (Direct Silicon Sensors)",
+                text="🛡️ Run as Admin (Direct Sensors)",
                 height=26,
                 corner_radius=6,
                 fg_color="#880e4f",
@@ -58,50 +56,31 @@ class DashboardView(ctk.CTkScrollableFrame):
                 font=ctk.CTkFont(size=10, weight="bold"),
                 command=self._on_elevate_admin
             )
-            self.btn_admin_badge.pack(side="right", padx=(6, 0))
+            self.btn_admin_badge.pack(side="right")
         else:
             self.btn_admin_badge = ctk.CTkLabel(
                 stats_hdr,
-                text="⚡ Ring-0 Silicon Direct",
+                text="⚡ Direct Silicon Sensors Active",
                 font=ctk.CTkFont(size=10, weight="bold"),
                 text_color=NEON_GREEN
             )
-            self.btn_admin_badge.pack(side="right", padx=(6, 0))
+            self.btn_admin_badge.pack(side="right")
 
-        self.btn_toggle_stats = ctk.CTkButton(
-            stats_hdr,
-            text="▼ Minimize",
-            width=90,
-            height=26,
-            corner_radius=6,
-            fg_color="#333333",
-            text_color="white",
-            hover_color="#444444",
-            font=ctk.CTkFont(size=11, weight="bold"),
-            command=self.toggle_stats_view
-        )
-        self.btn_toggle_stats.pack(side="right", padx=(6, 0))
-
-        # Stats Content Container (Collapsible)
-        self.stats_content = ctk.CTkFrame(self.stats_card, fg_color="transparent")
-        self.stats_content.pack(fill="x", padx=15, pady=(0, 12))
-
-        # 4 Metric Cards Grid
-        self.gauges_frame = ctk.CTkFrame(self.stats_content, fg_color="transparent")
-        self.gauges_frame.pack(fill="x", pady=(2, 10))
-        self.gauges_frame.grid_columnconfigure((0, 1, 2, 3), weight=1, uniform="metric")
+        # 3 Primary Telemetry Cards Grid
+        self.gauges_frame = ctk.CTkFrame(self.stats_card, fg_color="transparent")
+        self.gauges_frame.pack(fill="x", padx=15, pady=(0, 12))
+        self.gauges_frame.grid_columnconfigure((0, 1, 2), weight=1, uniform="metric")
 
         self.card_cpu = self._create_metric_card(self.gauges_frame, 0, "CPU TEMPERATURE", "24.0°C", "Peak: 26.0°C", NEON_GREEN)
         self.card_gpu = self._create_metric_card(self.gauges_frame, 1, "GPU TEMPERATURE", "22.0°C", "Load: 0%", NEON_CYAN)
-        self.card_fan = self._create_metric_card(self.gauges_frame, 2, "SYSTEM RAM USAGE", "0.0 GB (0%)", "Live Memory Footprint", NEON_CYAN)
-        self.card_power = self._create_metric_card(self.gauges_frame, 3, "CPU POWER & CLOCK", "8.0 W", "2400 MHz", DYNAMIC_GRAY)
+        self.card_ram = self._create_metric_card(self.gauges_frame, 2, "SYSTEM RAM USAGE", "0.0 GB (0%)", "Total: 16.0 GB", NEON_CYAN)
 
-        # ── 2. Diagnostic Hero Card ──
-        self.hero_diag = ctk.CTkFrame(self.stats_content, fg_color=BG_COLOR, corner_radius=8, border_width=1, border_color=BORDER_COLOR)
-        self.hero_diag.pack(fill="x", pady=(0, 4))
+        # ── 2. Diagnostic & 3-Level Cooling Control Center ──
+        self.hero_diag = ctk.CTkFrame(self, fg_color=FRAME_BG, corner_radius=8, border_width=1, border_color=BORDER_COLOR)
+        self.hero_diag.pack(fill="x", padx=10, pady=8)
 
         diag_hdr = ctk.CTkFrame(self.hero_diag, fg_color="transparent")
-        diag_hdr.pack(fill="x", padx=12, pady=(10, 4))
+        diag_hdr.pack(fill="x", padx=15, pady=(12, 4))
 
         self.badge_status = ctk.CTkLabel(
             diag_hdr,
@@ -123,77 +102,103 @@ class DashboardView(ctk.CTkScrollableFrame):
         )
         self.lbl_diag_title.pack(side="left", padx=10)
 
-        # Action Buttons Container (Right Side)
-        btn_box = ctk.CTkFrame(diag_hdr, fg_color="transparent")
-        btn_box.pack(side="right")
-
-        # 🧹 Quick RAM Purge Button
-        self.btn_quick_ram = ctk.CTkButton(
-            btn_box,
-            text="🧹 Quick RAM Flush",
-            font=ctk.CTkFont(size=11, weight="bold"),
-            fg_color=NEON_CYAN,
-            hover_color="#00b0ff",
-            text_color="black",
-            corner_radius=8,
-            height=32,
-            command=self._on_quick_ram_flush
+        self.lbl_diag_desc = ctk.CTkLabel(
+            self.hero_diag,
+            text="CPU temperature is normal. Background process load is light and active multitasking is smooth.",
+            font=ctk.CTkFont(size=12),
+            text_color=TEXT_COLOR,
+            wraplength=720,
+            justify="left",
+            anchor="w"
         )
-        self.btn_quick_ram.pack(side="left", padx=(0, 6))
+        self.lbl_diag_desc.pack(fill="x", padx=15, pady=(2, 8))
 
-        # ⚡ Master Cool Down & RAM Purge Button
+        # Cooling Mode Selector Box
+        mode_box = ctk.CTkFrame(self.hero_diag, fg_color=BG_COLOR, corner_radius=8, border_width=1, border_color=BORDER_COLOR)
+        mode_box.pack(fill="x", padx=15, pady=(0, 10))
+
+        mode_hdr = ctk.CTkFrame(mode_box, fg_color="transparent")
+        mode_hdr.pack(fill="x", padx=12, pady=(8, 4))
+
+        ctk.CTkLabel(
+            mode_hdr,
+            text="❄️ Select Thermal Relief Intensity (Cooling Mode):",
+            font=ctk.CTkFont(size=12, weight="bold"),
+            text_color=NEON_CYAN
+        ).pack(side="left")
+
+        self.seg_mode = ctk.CTkSegmentedButton(
+            mode_box,
+            values=["🌱 Soft", "⚡ Balanced (Recommended)", "❄️ Deep"],
+            variable=self.cooling_mode_var,
+            height=34,
+            corner_radius=6,
+            fg_color=FRAME_BG,
+            selected_color=NEON_CYAN,
+            selected_hover_color=NEON_CYAN,
+            unselected_color=FRAME_BG,
+            unselected_hover_color=BORDER_COLOR,
+            font=ctk.CTkFont(size=11, weight="bold"),
+            command=self._on_mode_selected
+        )
+        self.seg_mode.pack(fill="x", padx=12, pady=(0, 6))
+
+        self.lbl_mode_hint = ctk.CTkLabel(
+            mode_box,
+            text="💡 Balanced Mode: Throttles top background spikes while keeping your active window 100% fast.",
+            font=ctk.CTkFont(size=10, slant="italic"),
+            text_color=NEON_GREEN,
+            anchor="w"
+        )
+        self.lbl_mode_hint.pack(fill="x", padx=12, pady=(0, 8))
+
+        # Action Buttons Container
+        btn_box = ctk.CTkFrame(self.hero_diag, fg_color="transparent")
+        btn_box.pack(fill="x", padx=15, pady=(0, 12))
+
         self.btn_master_cool = ctk.CTkButton(
             btn_box,
-            text="⚡ 1-Click Cool Down & RAM Purge",
-            font=ctk.CTkFont(size=11, weight="bold"),
+            text="❄️ Cool Down PC Now",
+            font=ctk.CTkFont(size=12, weight="bold"),
             fg_color=NEON_MAGENTA,
             hover_color="#c00060",
             text_color="white",
             corner_radius=8,
-            height=32,
+            height=36,
             command=self._on_master_cool_down
         )
-        self.btn_master_cool.pack(side="left")
+        self.btn_master_cool.pack(side="left", padx=(0, 10), fill="x", expand=True)
 
-        self.lbl_diag_desc = ctk.CTkLabel(
-            self.hero_diag,
-            text="CPU temperature is cool. Cooling system is running smoothly with low background load.",
-            font=ctk.CTkFont(size=12),
-            text_color=TEXT_COLOR,
-            wraplength=700,
-            justify="left",
-            anchor="w"
+        self.btn_quick_ram = ctk.CTkButton(
+            btn_box,
+            text="🧹 Free Unused RAM",
+            font=ctk.CTkFont(size=12, weight="bold"),
+            fg_color=NEON_CYAN,
+            hover_color="#00b0ff",
+            text_color="black",
+            corner_radius=8,
+            height=36,
+            command=self._on_quick_ram_flush
         )
-        self.lbl_diag_desc.pack(fill="x", padx=15, pady=(2, 2))
+        self.btn_quick_ram.pack(side="left", fill="x", expand=True)
 
-        self.lbl_diag_rec = ctk.CTkLabel(
-            self.hero_diag,
-            text="💡 Recommendation: No action required. Thermal Guard is actively monitoring in low-overhead mode.",
-            font=ctk.CTkFont(size=11, slant="italic"),
-            text_color=DYNAMIC_GRAY,
-            wraplength=700,
-            justify="left",
-            anchor="w"
-        )
-        self.lbl_diag_rec.pack(fill="x", padx=15, pady=(0, 10))
-
-        # ── 3. Middle Section: Top Heat Culprit Applications ──
+        # ── 3. Bottom Section: Top Background CPU Consumers ──
         self.culprits_card = ctk.CTkFrame(self, fg_color=FRAME_BG, corner_radius=8, border_width=1, border_color=BORDER_COLOR)
-        self.culprits_card.pack(fill="x", padx=10, pady=8)
+        self.culprits_card.pack(fill="x", padx=10, pady=(0, 15))
 
         culprits_hdr = ctk.CTkFrame(self.culprits_card, fg_color="transparent")
         culprits_hdr.pack(fill="x", padx=15, pady=(12, 6))
 
         ctk.CTkLabel(
             culprits_hdr,
-            text="🔥 Top Heat Culprit Applications (Real-Time Attribution)",
+            text="🔥 Top Background CPU Consumers",
             font=ctk.CTkFont(size=14, weight="bold"),
             text_color=TEXT_COLOR
         ).pack(side="left")
 
         ctk.CTkLabel(
             culprits_hdr,
-            text="Ranks running apps by their thermal impact (HAS %)",
+            text="Active window is always protected",
             font=ctk.CTkFont(size=11, slant="italic"),
             text_color=DYNAMIC_GRAY
         ).pack(side="right")
@@ -201,27 +206,23 @@ class DashboardView(ctk.CTkScrollableFrame):
         self.rows_container = ctk.CTkFrame(self.culprits_card, fg_color="transparent")
         self.rows_container.pack(fill="x", padx=12, pady=(0, 12))
 
-        # Pre-build 5 Culprit Rows
-        for i in range(5):
+        # Pre-build 4 Clean Culprit Rows
+        for i in range(4):
             row = self._create_culprit_row(self.rows_container, i)
             self.culprit_rows.append(row)
-
-        # ── 4. Bottom Section: Ecosystem Banner Card ──
-        self.ecosystem_banner = EcosystemBannerCard(self, on_toast_callback=self.on_toast)
-        self.ecosystem_banner.pack(fill="x", padx=10, pady=(8, 15))
 
     def _create_metric_card(self, parent, col, title, value, sub, color):
         card = ctk.CTkFrame(parent, fg_color=BG_COLOR, corner_radius=8, border_width=1, border_color=BORDER_COLOR)
         card.grid(row=0, column=col, padx=4, pady=2, sticky="nsew")
 
         lbl_t = ctk.CTkLabel(card, text=title, font=ctk.CTkFont(size=10, weight="bold"), text_color=DYNAMIC_GRAY)
-        lbl_t.pack(anchor="w", padx=10, pady=(8, 2))
+        lbl_t.pack(anchor="w", padx=12, pady=(8, 2))
 
-        lbl_v = ctk.CTkLabel(card, text=value, font=ctk.CTkFont(size=20, weight="bold"), text_color=color)
-        lbl_v.pack(anchor="w", padx=10, pady=(0, 2))
+        lbl_v = ctk.CTkLabel(card, text=value, font=ctk.CTkFont(size=22, weight="bold"), text_color=color)
+        lbl_v.pack(anchor="w", padx=12, pady=(0, 2))
 
         lbl_s = ctk.CTkLabel(card, text=sub, font=ctk.CTkFont(size=11), text_color=DYNAMIC_GRAY)
-        lbl_s.pack(anchor="w", padx=10, pady=(0, 8))
+        lbl_s.pack(anchor="w", padx=12, pady=(0, 8))
 
         return {"frame": card, "title": lbl_t, "val": lbl_v, "sub": lbl_s, "base_color": color}
 
@@ -229,32 +230,29 @@ class DashboardView(ctk.CTkScrollableFrame):
         frame = ctk.CTkFrame(parent, fg_color=BG_COLOR if index % 2 == 0 else "transparent", corner_radius=6)
         frame.pack(fill="x", pady=2)
 
-        lbl_rank = ctk.CTkLabel(frame, text=f"#{index+1}", width=30, font=ctk.CTkFont(weight="bold", size=12), text_color=DYNAMIC_GRAY)
-        lbl_rank.pack(side="left", padx=(8, 4))
+        lbl_rank = ctk.CTkLabel(frame, text=f"#{index+1}", width=28, font=ctk.CTkFont(weight="bold", size=11), text_color=DYNAMIC_GRAY)
+        lbl_rank.pack(side="left", padx=(8, 2))
 
-        info_box = ctk.CTkFrame(frame, fg_color="transparent", width=170)
+        info_box = ctk.CTkFrame(frame, fg_color="transparent", width=180)
         info_box.pack(side="left", padx=4)
         info_box.pack_propagate(False)
 
-        lbl_name = ctk.CTkLabel(info_box, text="System Task", font=ctk.CTkFont(weight="bold", size=12), text_color=TEXT_COLOR, anchor="w")
+        lbl_name = ctk.CTkLabel(info_box, text="System Process", font=ctk.CTkFont(weight="bold", size=12), text_color=TEXT_COLOR, anchor="w")
         lbl_name.pack(fill="x")
         lbl_desc = ctk.CTkLabel(info_box, text="Idle", font=ctk.CTkFont(size=10), text_color=DYNAMIC_GRAY, anchor="w")
         lbl_desc.pack(fill="x")
 
-        lbl_stats = ctk.CTkLabel(frame, text="CPU: 0.0% | 0 MB", width=130, font=ctk.CTkFont(size=11), text_color=TEXT_COLOR)
+        lbl_stats = ctk.CTkLabel(frame, text="CPU: 0.0% | 0 MB", width=140, font=ctk.CTkFont(size=11), text_color=TEXT_COLOR)
         lbl_stats.pack(side="left", padx=6)
 
-        lbl_has = ctk.CTkLabel(frame, text="HAS: 0.0%", width=70, font=ctk.CTkFont(size=11, weight="bold"), text_color=NEON_CYAN)
-        lbl_has.pack(side="left", padx=4)
-
-        prog = ctk.CTkProgressBar(frame, height=10, corner_radius=5, fg_color="#333333", progress_color=NEON_GREEN)
+        prog = ctk.CTkProgressBar(frame, height=8, corner_radius=4, fg_color="#333333", progress_color=NEON_GREEN)
         prog.pack(side="left", fill="x", expand=True, padx=8)
         prog.set(0.02)
 
-        btn_relieve = ctk.CTkButton(
+        btn_slow = ctk.CTkButton(
             frame,
-            text="Relieve",
-            width=70,
+            text="Slow Down",
+            width=75,
             height=26,
             corner_radius=5,
             fg_color="transparent",
@@ -263,9 +261,9 @@ class DashboardView(ctk.CTkScrollableFrame):
             text_color=TEXT_COLOR,
             hover_color=NEON_CYAN,
             font=ctk.CTkFont(size=10, weight="bold"),
-            command=lambda idx=index: self._on_relieve_process(idx)
+            command=lambda idx=index: self._on_slow_down_process(idx)
         )
-        btn_relieve.pack(side="right", padx=(4, 8))
+        btn_slow.pack(side="right", padx=(4, 8))
 
         return {
             "frame": frame,
@@ -273,20 +271,19 @@ class DashboardView(ctk.CTkScrollableFrame):
             "name": lbl_name,
             "desc": lbl_desc,
             "stats": lbl_stats,
-            "has": lbl_has,
             "progress": prog,
-            "btn_relieve": btn_relieve,
+            "btn_slow": btn_slow,
             "pid": None
         }
 
-    def toggle_stats_view(self):
-        self.stats_expanded = not self.stats_expanded
-        if self.stats_expanded:
-            self.stats_content.pack(fill="x", padx=15, pady=(0, 12))
-            self.btn_toggle_stats.configure(text="▼ Minimize")
+    def _on_mode_selected(self, val: str):
+        if "Soft" in val:
+            hint = "💡 Soft Mode: Cleans background RAM and calms idle updaters. Zero impact on multitasking."
+        elif "Deep" in val:
+            hint = "💡 Deep Mode: Emergency thermal relief. Calms all background tasks for maximum temperature drop."
         else:
-            self.stats_content.pack_forget()
-            self.btn_toggle_stats.configure(text="▶ Expand")
+            hint = "💡 Balanced Mode: Throttles top background spikes while keeping your active window 100% fast."
+        self.lbl_mode_hint.configure(text=hint)
 
     def _on_elevate_admin(self):
         restart_as_admin()
@@ -294,7 +291,29 @@ class DashboardView(ctk.CTkScrollableFrame):
     def _on_quick_ram_flush(self):
         freed = purge_all_background_ram(self.top_culprits_cache)
         if self.on_toast:
-            self.on_toast("🧹 Quick RAM Flush", f"Reclaimed ~{freed:.0f} MB memory from background processes.")
+            self.on_toast("🧹 Free Unused RAM", f"Reclaimed ~{freed:.0f} MB memory from background processes.")
+
+    def _on_master_cool_down(self):
+        mode_text = self.cooling_mode_var.get()
+        if "Soft" in mode_text:
+            mode_key = "soft"
+        elif "Deep" in mode_text:
+            mode_key = "deep"
+        else:
+            mode_key = "balanced"
+
+        res = ThermalReliefEngine.apply_cooling_mode(mode_key, self.top_culprits_cache)
+        if self.on_toast:
+            self.on_toast("❄️ Thermal Relief Active", res["message"])
+
+    def _on_slow_down_process(self, index: int):
+        if index < len(self.top_culprits_cache):
+            item = self.top_culprits_cache[index]
+            pid = item.get("pid")
+            if pid:
+                res = ThermalReliefEngine.throttle_process(pid)
+                if self.on_toast:
+                    self.on_toast("Process Slow Down", res["message"])
 
     def update_telemetry(self, telemetry: Dict[str, Any], culprits: List[Dict[str, Any]], diagnostics: Dict[str, Any]):
         self.top_culprits_cache = culprits
@@ -304,14 +323,10 @@ class DashboardView(ctk.CTkScrollableFrame):
         max_t = telemetry.get("cpu_temp_max", cpu_t)
         gpu_t = telemetry.get("gpu_temp", 22.0)
         gpu_l = telemetry.get("gpu_load", 0.0)
-        fan_rpm = telemetry.get("fan_rpm", 0)
-        fan_status = telemetry.get("fan_status", "0 RPM (Silent / Standby)")
-        pwr = telemetry.get("cpu_power", 8.0)
-        freq = telemetry.get("cpu_freq_mhz", 2400.0)
         is_adm = telemetry.get("is_admin", False)
 
         self.card_cpu["val"].configure(text=f"{cpu_t:.1f}°C")
-        self.card_cpu["sub"].configure(text=f"Peak: {max_t:.1f}°C ({'Ring-0' if is_adm else 'User Mode'})")
+        self.card_cpu["sub"].configure(text=f"Peak: {max_t:.1f}°C ({'Admin' if is_adm else 'Standard'})")
 
         if cpu_t >= 80.0:
             self.card_cpu["val"].configure(text_color="#FF0055")
@@ -327,24 +342,17 @@ class DashboardView(ctk.CTkScrollableFrame):
         ram_t = telemetry.get("ram_total_gb", 16.0)
         ram_p = telemetry.get("ram_pct", 0)
 
-        self.card_fan["val"].configure(text=f"{ram_u:.1f} GB ({ram_p:.0f}%)")
-        if fan_rpm > 0:
-            self.card_fan["sub"].configure(text=f"Total: {ram_t:.0f}GB | Fan: {fan_rpm} RPM")
-        else:
-            self.card_fan["sub"].configure(text=f"Total: {ram_t:.0f}GB | Fan: Silent / Standby")
+        self.card_ram["val"].configure(text=f"{ram_u:.1f} GB ({ram_p:.0f}%)")
+        self.card_ram["sub"].configure(text=f"Total: {ram_t:.0f} GB Physical Memory")
 
-        self.card_power["val"].configure(text=f"{pwr:.1f} W")
-        self.card_power["sub"].configure(text=f"{freq:.0f} MHz")
-
-        # 2. Update Diagnostic Hero Card
+        # 2. Update Diagnostic Status
         status = diagnostics.get("status", "OPTIMAL")
         headline = diagnostics.get("headline", "System Cool & Healthy")
         badge_col = diagnostics.get("badge_color", NEON_GREEN)
 
         self.badge_status.configure(text=status, fg_color=badge_col)
         self.lbl_diag_title.configure(text=headline)
-        self.lbl_diag_desc.configure(text=diagnostics.get("explanation", ""))
-        self.lbl_diag_rec.configure(text=diagnostics.get("recommendation", ""))
+        self.lbl_diag_desc.configure(text=diagnostics.get("explanation", "Hardware running at safe temperature."))
 
         # 3. Update Culprit Rows
         for i, row in enumerate(self.culprit_rows):
@@ -356,36 +364,19 @@ class DashboardView(ctk.CTkScrollableFrame):
                 row["stats"].configure(text=f"CPU: {c.get('cpu_percent', 0.0):.1f}% | {c.get('memory_mb', 0):.0f} MB")
 
                 score = c.get("heat_score", 0.0)
-                row["has"].configure(text=f"HAS: {score:.1f}%")
                 row["progress"].set(min(1.0, max(0.02, score / 100.0)))
                 row["progress"].configure(progress_color=c.get("heat_color", NEON_GREEN))
                 row["pid"] = c.get("pid")
             else:
                 row["frame"].pack_forget()
 
-    def _on_relieve_process(self, index: int):
-        if index < len(self.top_culprits_cache):
-            item = self.top_culprits_cache[index]
-            pid = item.get("pid")
-            if pid:
-                res = ThermalReliefEngine.throttle_process(pid)
-                if self.on_toast:
-                    self.on_toast("Thermal Relief", res["message"])
-
-    def _on_master_cool_down(self):
-        res = ThermalReliefEngine.one_click_cool_down(self.top_culprits_cache)
-        if self.on_toast:
-            self.on_toast("1-Click Cool Down & RAM Purge", res["message"])
-
     def apply_theme(self):
         self.configure(fg_color=BG_COLOR)
         self.stats_card.configure(fg_color=FRAME_BG, border_color=BORDER_COLOR)
-        self.hero_diag.configure(fg_color=BG_COLOR, border_color=BORDER_COLOR)
+        self.hero_diag.configure(fg_color=FRAME_BG, border_color=BORDER_COLOR)
         self.culprits_card.configure(fg_color=FRAME_BG, border_color=BORDER_COLOR)
         self.lbl_diag_title.configure(text_color=TEXT_COLOR)
         self.lbl_diag_desc.configure(text_color=TEXT_COLOR)
-        self.lbl_diag_rec.configure(text_color=DYNAMIC_GRAY)
-        self.ecosystem_banner.refresh_theme()
 
     def refresh_theme(self):
         self.apply_theme()
