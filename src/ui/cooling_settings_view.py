@@ -7,6 +7,7 @@ import customtkinter as ctk
 from typing import Callable
 from src.ui.theme import ThemeManager, NEON_CYAN, NEON_MAGENTA, NEON_GREEN, BG_COLOR, FRAME_BG, BORDER_COLOR, TEXT_COLOR, DYNAMIC_GRAY
 from src.core.thermal_relief import ThermalReliefEngine
+from src.core.history_manager import HistoryManager
 
 class CoolingSettingsView(ctk.CTkScrollableFrame):
     def __init__(self, master, on_toast: Callable[[str], None] = None, **kwargs):
@@ -19,6 +20,7 @@ class CoolingSettingsView(ctk.CTkScrollableFrame):
             **kwargs
         )
         self.toast = on_toast
+        self.history_mgr = HistoryManager.get_instance()
         self._build_ui()
 
     def _build_ui(self):
@@ -35,7 +37,7 @@ class CoolingSettingsView(ctk.CTkScrollableFrame):
 
         ctk.CTkLabel(
             hdr_card,
-            text="Customize your exact target cooling thresholds, auto-restore timers, and background process priority guardrails.",
+            text="Customize your exact target cooling thresholds, auto-restore timers, and telemetry logging preferences.",
             font=ctk.CTkFont(size=11),
             text_color=DYNAMIC_GRAY
         ).pack(anchor="w", padx=15, pady=(0, 12))
@@ -53,7 +55,7 @@ class CoolingSettingsView(ctk.CTkScrollableFrame):
 
         ctk.CTkLabel(
             temp_card,
-            text="When 1-Click Cool Down is active, background tasks remain throttled until CPU drops below this temperature:",
+            text="When Cool Down is active, background tasks remain throttled until CPU drops below this temperature:",
             font=ctk.CTkFont(size=11),
             text_color=DYNAMIC_GRAY
         ).pack(anchor="w", padx=15, pady=(0, 8))
@@ -79,7 +81,7 @@ class CoolingSettingsView(ctk.CTkScrollableFrame):
 
         self.lbl_temp_hint = ctk.CTkLabel(
             temp_card,
-            text=f"💡 Current Selection: {self.temp_var.get()} : Recommended for balanced thermal longevity and smooth background multitasking.",
+            text=f"💡 Current Selection: {self.temp_var.get()} : Recommended for balanced thermal longevity and smooth multitasking.",
             font=ctk.CTkFont(size=10, slant="italic"),
             text_color=NEON_GREEN
         )
@@ -98,7 +100,7 @@ class CoolingSettingsView(ctk.CTkScrollableFrame):
 
         ctk.CTkLabel(
             timeout_card,
-            text="Background tasks are guaranteed to restore back to normal priority after this duration, even in warm ambient rooms:",
+            text="Background tasks are guaranteed to restore back to normal priority after this duration, even in warm rooms:",
             font=ctk.CTkFont(size=11),
             text_color=DYNAMIC_GRAY
         ).pack(anchor="w", padx=15, pady=(0, 8))
@@ -122,7 +124,57 @@ class CoolingSettingsView(ctk.CTkScrollableFrame):
         )
         self.seg_timeout.pack(fill="x", padx=15, pady=(0, 12))
 
-        # ── 4. Real Safety & Process Guardrails ──
+        # ── 4. Telemetry History Logging Toggle Card ──
+        log_card = ctk.CTkFrame(self, fg_color=FRAME_BG, corner_radius=8, border_width=1, border_color=BORDER_COLOR)
+        log_card.pack(fill="x", padx=15, pady=6)
+
+        log_hdr = ctk.CTkFrame(log_card, fg_color="transparent")
+        log_hdr.pack(fill="x", padx=15, pady=(12, 4))
+
+        ctk.CTkLabel(
+            log_hdr,
+            text="💾 Background History Recording (Save to Local SQLite DB):",
+            font=ctk.CTkFont(size=13, weight="bold"),
+            text_color=TEXT_COLOR
+        ).pack(side="left")
+
+        is_logging = self.history_mgr.is_logging_enabled
+        self.sw_log_var = ctk.StringVar(value="ON" if is_logging else "OFF")
+        self.sw_logging = ctk.CTkSwitch(
+            log_hdr,
+            text="ON" if is_logging else "OFF",
+            font=ctk.CTkFont(size=12, weight="bold"),
+            variable=self.sw_log_var,
+            onvalue="ON",
+            offvalue="OFF",
+            progress_color=NEON_GREEN,
+            command=self._on_logging_toggled
+        )
+        self.sw_logging.pack(side="right")
+
+        self.lbl_log_desc = ctk.CTkLabel(
+            log_card,
+            text="• ON: Saves 60-second telemetry snapshots for the 7-day Visual History tab.\n• OFF (Ultra-Lean): Zero disk writes. App runs 100% in RAM with zero background disk activity.",
+            font=ctk.CTkFont(size=11),
+            text_color=DYNAMIC_GRAY,
+            justify="left"
+        )
+        self.lbl_log_desc.pack(anchor="w", padx=15, pady=(2, 8))
+
+        btn_clear_history = ctk.CTkButton(
+            log_card,
+            text="🗑️ Clear Saved History Database",
+            height=28,
+            corner_radius=6,
+            fg_color="#333333",
+            hover_color="#550000",
+            text_color="#ff8888",
+            font=ctk.CTkFont(size=11),
+            command=self._on_clear_history_clicked
+        )
+        btn_clear_history.pack(anchor="w", padx=15, pady=(0, 12))
+
+        # ── 5. Real Safety & Process Guardrails ──
         guard_card = ctk.CTkFrame(self, fg_color=FRAME_BG, corner_radius=8, border_width=1, border_color=BORDER_COLOR)
         guard_card.pack(fill="x", padx=15, pady=(6, 15))
 
@@ -171,6 +223,24 @@ class CoolingSettingsView(ctk.CTkScrollableFrame):
         ThermalReliefEngine.save_config(timeout_sec=val)
         if self.toast:
             self.toast(f"💾 Auto-restore safety timeout set to {val} seconds")
+
+    def _on_logging_toggled(self):
+        is_on = self.sw_log_var.get() == "ON"
+        self.sw_logging.configure(text="ON" if is_on else "OFF")
+        self.history_mgr.save_config(is_on)
+        if self.toast:
+            if is_on:
+                self.toast("💾 History Logging Enabled: 60s snapshots will be saved to SQLite.")
+            else:
+                self.toast("⚡ Ultra-Lean Mode: History disk recording turned OFF (Pure RAM mode).")
+
+    def _on_clear_history_clicked(self):
+        success = self.history_mgr.clear_all_history()
+        if self.toast:
+            if success:
+                self.toast("🗑️ All historical telemetry logs have been cleared.")
+            else:
+                self.toast("⚠️ Could not clear history database.")
 
     def refresh_theme(self):
         self.configure(fg_color=BG_COLOR)
