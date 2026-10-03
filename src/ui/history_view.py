@@ -149,68 +149,88 @@ class HistoryView(ctk.CTkFrame):
         grid_col = ThemeManager.get("border")
         canvas.configure(bg=bg_card)
 
-        # Draw Grid Lines & Thresholds
-        # 100°C (top = 10px), 85°C, 70°C, 50°C, 30°C (bottom = h - 20px)
+        # <!-- ================= Section: Clean Grid Lines & Thresholds ================= -->
         t_max = 100.0
         t_min = 30.0
 
         def temp_to_y(temp):
             ratio = max(0.0, min(1.0, (temp - t_min) / (t_max - t_min)))
-            return h - 20 - (ratio * (h - 35))
+            return h - 25 - (ratio * (h - 45))
 
         # Threshold line 85°C (Overheat Alert)
         y85 = temp_to_y(85.0)
-        canvas.create_line(40, y85, w - 10, y85, fill="#ef4444", dash=(4, 4), width=1)
-        canvas.create_text(25, y85, text="85°C", fill="#ef4444", font=("Segoe UI", 9))
+        canvas.create_line(45, y85, w - 15, y85, fill="#ef4444", dash=(4, 4), width=1)
+        canvas.create_text(25, y85, text="85°C", fill="#ef4444", font=("Segoe UI", 9, "bold"))
 
         # Threshold line 70°C (Caution)
         y70 = temp_to_y(70.0)
-        canvas.create_line(40, y70, w - 10, y70, fill="#f97316", dash=(2, 4), width=1)
+        canvas.create_line(45, y70, w - 15, y70, fill="#f97316", dash=(2, 4), width=1)
         canvas.create_text(25, y70, text="70°C", fill="#f97316", font=("Segoe UI", 9))
 
         # Baseline 40°C
         y40 = temp_to_y(40.0)
-        canvas.create_line(40, y40, w - 10, y40, fill=grid_col, dash=(1, 5), width=1)
+        canvas.create_line(45, y40, w - 15, y40, fill=grid_col, dash=(1, 5), width=1)
         canvas.create_text(25, y40, text="40°C", fill=ThemeManager.get("text_muted"), font=("Segoe UI", 9))
 
+        # Time Scale Axis at Bottom
+        y_axis = h - 18
+        canvas.create_line(45, y_axis, w - 15, y_axis, fill=grid_col, width=1)
+        canvas.create_text(50, y_axis + 10, text="-60m", fill=ThemeManager.get("text_muted"), font=("Segoe UI", 8))
+        canvas.create_text((w + 30) // 2, y_axis + 10, text="-30m", fill=ThemeManager.get("text_muted"), font=("Segoe UI", 8))
+        canvas.create_text(w - 25, y_axis + 10, text="Now", fill=ThemeManager.get("text_muted"), font=("Segoe UI", 8, "bold"))
+
         if not samples:
-            canvas.create_text(w / 2, h / 2, text="Sampling real-time telemetry...", fill=ThemeManager.get("text_muted"), font=("Segoe UI", 11))
+            canvas.create_text(w / 2, h / 2, text="Sampling real-time telemetry (Updates every second)...", fill=ThemeManager.get("text_muted"), font=("Segoe UI", 11))
             return
 
-        # Take last 60 samples or scale
+        # Take last 60 samples
         n_samples = min(len(samples), 60)
         recent = samples[-n_samples:]
-        step_x = (w - 60) / max(1, n_samples - 1)
+        step_x = (w - 70) / max(1, n_samples - 1)
 
-        # Plot CPU Temp Line
+        # 3-Point Moving Average filter for CPU Load to prevent random micro-spikes
+        smoothed_loads = []
+        for i in range(len(recent)):
+            if i == 0:
+                smoothed_loads.append(recent[i].get("cpu_load", 0.0))
+            elif i == 1:
+                smoothed_loads.append((recent[i - 1].get("cpu_load", 0.0) + recent[i].get("cpu_load", 0.0)) / 2.0)
+            else:
+                val = (recent[i - 2].get("cpu_load", 0.0) * 0.20 +
+                       recent[i - 1].get("cpu_load", 0.0) * 0.30 +
+                       recent[i].get("cpu_load", 0.0) * 0.50)
+                smoothed_loads.append(val)
+
+        # <!-- ================= Section: Precise Linear Plotting ================= -->
         points_temp = []
         points_load = []
 
-        for idx, s in enumerate(recent):
-            x = 45 + (idx * step_x)
+        for idx in range(len(recent)):
+            s = recent[idx]
+            x = 48 + (idx * step_x)
             yt = temp_to_y(s.get("cpu_temp", 45.0))
             points_temp.append((x, yt))
 
-            # CPU Load mapped to 0-100%
-            load = s.get("cpu_load", 0.0)
-            yl = h - 20 - ((load / 100.0) * (h - 35))
+            # CPU Load (0 - 100%) mapped accurately
+            load_val = smoothed_loads[idx]
+            yl = h - 25 - ((load_val / 100.0) * (h - 45))
             points_load.append((x, yl))
 
-        # Draw CPU Load line (Yellow)
+        # Draw CPU Load line (Yellow - Clean Linear Segment)
         if len(points_load) > 1:
             flat_load = [coord for pt in points_load for coord in pt]
-            canvas.create_line(flat_load, fill="#eab308", width=1, smooth=True)
+            canvas.create_line(flat_load, fill="#eab308", width=1, smooth=False)
 
-        # Draw CPU Temp line (Sky Blue)
+        # Draw CPU Temp line (Neon Cyan - Clean Solid Polyline)
         if len(points_temp) > 1:
             flat_temp = [coord for pt in points_temp for coord in pt]
-            canvas.create_line(flat_temp, fill=ThemeManager.get("chart_line"), width=2, smooth=True)
+            canvas.create_line(flat_temp, fill="#00e5ff", width=2, smooth=False)
 
-        # Latest Temp Badge on last point
+        # Latest Temp & Load Badges on the rightmost data point
         last_x, last_y = points_temp[-1]
         last_temp = recent[-1].get("cpu_temp", 45.0)
-        canvas.create_oval(last_x - 4, last_y - 4, last_x + 4, last_y + 4, fill=ThemeManager.get("chart_line"), outline="#ffffff")
-        canvas.create_text(last_x, last_y - 12, text=f"{last_temp:.1f}°C", fill=ThemeManager.get("text_primary"), font=("Segoe UI", 10, "bold"))
+        canvas.create_oval(last_x - 4, last_y - 4, last_x + 4, last_y + 4, fill="#00e5ff", outline="#ffffff")
+        canvas.create_text(last_x, max(12, last_y - 12), text=f"{last_temp:.1f}°C", fill="#00e5ff", font=("Segoe UI", 10, "bold"))
 
     def refresh_log_table(self):
         """Refreshes the SQLite telemetry table."""

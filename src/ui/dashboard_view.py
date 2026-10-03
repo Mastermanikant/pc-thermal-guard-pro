@@ -75,7 +75,7 @@ class DashboardView(ctk.CTkScrollableFrame):
         self.card_gpu = self._create_metric_card(self.gauges_frame, 1, "GPU TEMPERATURE", "22.0°C", "Load: 0%", NEON_CYAN)
         self.card_ram = self._create_metric_card(self.gauges_frame, 2, "SYSTEM RAM USAGE", "0.0 GB (0%)", "Total: 16.0 GB", NEON_CYAN)
 
-        # ── 2. Diagnostic & 3-Level Cooling Control Center ──
+        # <!-- ================= Section: Diagnostic & Adaptive Relief ================= -->
         self.hero_diag = ctk.CTkFrame(self, fg_color=FRAME_BG, corner_radius=8, border_width=1, border_color=BORDER_COLOR)
         self.hero_diag.pack(fill="x", padx=10, pady=8)
 
@@ -111,60 +111,21 @@ class DashboardView(ctk.CTkScrollableFrame):
             justify="left",
             anchor="w"
         )
-        self.lbl_diag_desc.pack(fill="x", padx=15, pady=(2, 8))
+        self.lbl_diag_desc.pack(fill="x", padx=15, pady=(2, 10))
 
-        # Cooling Mode Selector Box
-        mode_box = ctk.CTkFrame(self.hero_diag, fg_color=BG_COLOR, corner_radius=8, border_width=1, border_color=BORDER_COLOR)
-        mode_box.pack(fill="x", padx=15, pady=(0, 10))
-
-        mode_hdr = ctk.CTkFrame(mode_box, fg_color="transparent")
-        mode_hdr.pack(fill="x", padx=12, pady=(8, 4))
-
-        ctk.CTkLabel(
-            mode_hdr,
-            text="❄️ Select Thermal Relief Intensity (Cooling Mode):",
-            font=ctk.CTkFont(size=12, weight="bold"),
-            text_color=NEON_CYAN
-        ).pack(side="left")
-
-        self.seg_mode = ctk.CTkSegmentedButton(
-            mode_box,
-            values=["🌱 Soft", "⚡ Balanced (Recommended)", "❄️ Deep"],
-            variable=self.cooling_mode_var,
-            height=34,
-            corner_radius=6,
-            fg_color=FRAME_BG,
-            selected_color=NEON_CYAN,
-            selected_hover_color=NEON_CYAN,
-            unselected_color=FRAME_BG,
-            unselected_hover_color=BORDER_COLOR,
-            font=ctk.CTkFont(size=11, weight="bold"),
-            command=self._on_mode_selected
-        )
-        self.seg_mode.pack(fill="x", padx=12, pady=(0, 6))
-
-        self.lbl_mode_hint = ctk.CTkLabel(
-            mode_box,
-            text="💡 Balanced Mode: Throttles top background spikes while keeping your active window 100% fast.",
-            font=ctk.CTkFont(size=10, slant="italic"),
-            text_color=NEON_GREEN,
-            anchor="w"
-        )
-        self.lbl_mode_hint.pack(fill="x", padx=12, pady=(0, 8))
-
-        # Action Buttons Container
+        # <!-- ================= Section: 1-Click Action Buttons ================= -->
         btn_box = ctk.CTkFrame(self.hero_diag, fg_color="transparent")
-        btn_box.pack(fill="x", padx=15, pady=(0, 12))
+        btn_box.pack(fill="x", padx=15, pady=(0, 14))
 
         self.btn_master_cool = ctk.CTkButton(
             btn_box,
-            text="❄️ Cool Down PC Now",
+            text="❄️ Smart Cool Down (Auto-Adaptive Relief)",
             font=ctk.CTkFont(size=12, weight="bold"),
             fg_color=NEON_MAGENTA,
             hover_color="#c00060",
             text_color="white",
             corner_radius=8,
-            height=36,
+            height=38,
             command=self._on_master_cool_down
         )
         self.btn_master_cool.pack(side="left", padx=(0, 10), fill="x", expand=True)
@@ -177,7 +138,7 @@ class DashboardView(ctk.CTkScrollableFrame):
             hover_color="#00b0ff",
             text_color="black",
             corner_radius=8,
-            height=36,
+            height=38,
             command=self._on_quick_ram_flush
         )
         self.btn_quick_ram.pack(side="left", fill="x", expand=True)
@@ -276,15 +237,6 @@ class DashboardView(ctk.CTkScrollableFrame):
             "pid": None
         }
 
-    def _on_mode_selected(self, val: str):
-        if "Soft" in val:
-            hint = "💡 Soft Mode: Cleans background RAM and calms idle updaters. Zero impact on multitasking."
-        elif "Deep" in val:
-            hint = "💡 Deep Mode: Emergency thermal relief. Calms all background tasks for maximum temperature drop."
-        else:
-            hint = "💡 Balanced Mode: Throttles top background spikes while keeping your active window 100% fast."
-        self.lbl_mode_hint.configure(text=hint)
-
     def _on_elevate_admin(self):
         restart_as_admin()
 
@@ -294,17 +246,21 @@ class DashboardView(ctk.CTkScrollableFrame):
             self.on_toast("🧹 Free Unused RAM", f"Reclaimed ~{freed:.0f} MB memory from background processes.")
 
     def _on_master_cool_down(self):
-        mode_text = self.cooling_mode_var.get()
-        if "Soft" in mode_text:
-            mode_key = "soft"
-        elif "Deep" in mode_text:
+        # <!-- ================= Auto-Adaptive Smart Cooling Logic ================= -->
+        temp = getattr(self, "_last_cpu_temp", 45.0)
+        if temp >= 75.0:
             mode_key = "deep"
-        else:
+            mode_desc = f"Deep Emergency Cooling ({temp:.1f}°C High Temp)"
+        elif temp >= 60.0:
             mode_key = "balanced"
+            mode_desc = f"Balanced Relief ({temp:.1f}°C Warm State)"
+        else:
+            mode_key = "soft"
+            mode_desc = f"Soft Calming & Memory Sweep ({temp:.1f}°C Safe State)"
 
         res = ThermalReliefEngine.apply_cooling_mode(mode_key, self.top_culprits_cache)
         if self.on_toast:
-            self.on_toast("❄️ Thermal Relief Active", res["message"])
+            self.on_toast(f"❄️ {mode_desc}", res["message"])
 
     def _on_slow_down_process(self, index: int):
         if index < len(self.top_culprits_cache):
@@ -320,6 +276,7 @@ class DashboardView(ctk.CTkScrollableFrame):
 
         # 1. Update Metric Cards
         cpu_t = telemetry.get("cpu_package_temp") or telemetry.get("cpu_temp") or 24.0
+        self._last_cpu_temp = cpu_t
         max_t = telemetry.get("cpu_temp_max", cpu_t)
         cpu_pwr = telemetry.get("cpu_power", 0.0)
         gpu_t = telemetry.get("gpu_temp", 22.0)

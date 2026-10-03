@@ -92,7 +92,50 @@ class CoolingSettingsView(ctk.CTkScrollableFrame):
         )
         self.btn_launchpad.pack(fill="x", padx=18, pady=(0, 14))
 
-        # ── 3. Target Temperature Threshold Setting ──
+        # <!-- ================= Section: Manual Thermal Relief Intensity Tuning ================= -->
+        mode_card = ctk.CTkFrame(self, fg_color=FRAME_BG, corner_radius=10, border_width=1, border_color=BORDER_COLOR)
+        mode_card.pack(fill="x", padx=15, pady=8)
+
+        ctk.CTkLabel(
+            mode_card,
+            text="❄️ Manual Thermal Relief Intensity (Cooling Mode Preset):",
+            font=ctk.CTkFont(size=13, weight="bold"),
+            text_color=TEXT_COLOR
+        ).pack(anchor="w", padx=18, pady=(14, 2))
+
+        ctk.CTkLabel(
+            mode_card,
+            text="Choose preferred throttling depth for background processes:",
+            font=ctk.CTkFont(size=11),
+            text_color=DYNAMIC_GRAY
+        ).pack(anchor="w", padx=18, pady=(0, 10))
+
+        self.mode_var = ctk.StringVar(value="⚡ Balanced (Recommended)")
+        self.seg_mode = ctk.CTkSegmentedButton(
+            mode_card,
+            values=["🌱 Soft", "⚡ Balanced (Recommended)", "❄️ Deep"],
+            variable=self.mode_var,
+            height=34,
+            corner_radius=6,
+            fg_color=BG_COLOR,
+            selected_color=NEON_CYAN,
+            selected_hover_color=NEON_CYAN,
+            unselected_color=FRAME_BG,
+            unselected_hover_color=BORDER_COLOR,
+            font=ctk.CTkFont(size=11, weight="bold"),
+            command=self._on_mode_preset_changed
+        )
+        self.seg_mode.pack(fill="x", padx=18, pady=(0, 8))
+
+        self.lbl_mode_hint = ctk.CTkLabel(
+            mode_card,
+            text="💡 Balanced Mode: Throttles top background spikes while keeping active foreground window 100% fast.",
+            font=ctk.CTkFont(size=10, slant="italic"),
+            text_color=NEON_GREEN
+        )
+        self.lbl_mode_hint.pack(anchor="w", padx=18, pady=(0, 14))
+
+        # <!-- ================= Section: Target Temperature Threshold Setting ================= -->
         temp_card = ctk.CTkFrame(self, fg_color=FRAME_BG, corner_radius=10, border_width=1, border_color=BORDER_COLOR)
         temp_card.pack(fill="x", padx=15, pady=8)
 
@@ -260,6 +303,17 @@ class CoolingSettingsView(ctk.CTkScrollableFrame):
             p_box.pack(fill="x", padx=18, pady=4)
             ctk.CTkLabel(p_box, text=f"✅ {title}", font=ctk.CTkFont(size=11, weight="bold"), text_color=TEXT_COLOR).pack(anchor="w", padx=12, pady=(6, 1))
             ctk.CTkLabel(p_box, text=desc, font=ctk.CTkFont(size=10), text_color=DYNAMIC_GRAY).pack(anchor="w", padx=12, pady=(0, 6))
+
+    def _on_mode_preset_changed(self, val: str):
+        if "Soft" in val:
+            hint = "💡 Soft Mode: Cleans background RAM and calms idle updaters. Zero impact on multitasking."
+        elif "Deep" in val:
+            hint = "💡 Deep Mode: Emergency thermal relief. Calms all background tasks for maximum temperature drop."
+        else:
+            hint = "💡 Balanced Mode: Throttles top background spikes while keeping active foreground window 100% fast."
+        self.lbl_mode_hint.configure(text=hint)
+        if self.toast:
+            self.toast(f"❄️ Default Cooling Mode set to: {val}")
 
     def _on_temp_changed(self, value: str):
         val = float(value.replace("°C", ""))
