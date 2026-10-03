@@ -1,4 +1,4 @@
-﻿"""
+"""
 PC Thermal Guard Pro - Entrypoint Bootstrapper
 Master Manikant Yadav Ecosystem (FrankBase System Suite)
 """
@@ -11,6 +11,11 @@ if BASE_DIR not in sys.path:
     sys.path.insert(0, BASE_DIR)
 
 import customtkinter as ctk
+
+# Strictly enforce Dark Mode on startup before any widget initialization
+ctk.set_appearance_mode("Dark")
+ctk.set_default_color_theme("blue")
+
 from src.core.hardware_sensor import HardwareSensorEngine
 from src.core.history_manager import HistoryManager
 from src.ui.main_window import MainWindow
@@ -24,7 +29,7 @@ def main():
         pass
 
     # Initialize Core Engines
-    sensor_engine = HardwareSensorEngine()
+    sensor_engine = HardwareSensorEngine.get_instance()
     history_manager = HistoryManager()
 
     # Launch GUI Controller

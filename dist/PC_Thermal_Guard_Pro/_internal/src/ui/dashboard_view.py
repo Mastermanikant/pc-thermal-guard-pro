@@ -7,7 +7,7 @@ import time
 import customtkinter as ctk
 from typing import Dict, Any, List, Callable
 from src.ui.theme import ThemeManager, NEON_CYAN, NEON_MAGENTA, NEON_GREEN, BG_COLOR, FRAME_BG, BORDER_COLOR, TEXT_COLOR, DYNAMIC_GRAY
-from src.core.thermal_relief import ThermalReliefEngine
+from src.core.thermal_relief import ThermalReliefEngine, purge_all_background_ram
 from src.core.hardware_sensor import restart_as_admin, is_admin
 from src.ui.ecosystem_card import EcosystemBannerCard
 
@@ -29,7 +29,6 @@ class DashboardView(ctk.CTkScrollableFrame):
         self.is_elevated = is_admin()
 
         self._build_ui()
-        self._check_exhaust_cooldown_tick()
 
     def _build_ui(self):
         # ── 1. Top Section: Global Thermal Stats & Telemetry ──
@@ -128,19 +127,19 @@ class DashboardView(ctk.CTkScrollableFrame):
         btn_box = ctk.CTkFrame(diag_hdr, fg_color="transparent")
         btn_box.pack(side="right")
 
-        # 💨 Exhaust Hot Air Button (With Anti-Spam Safety Cooldown Lockout)
-        self.btn_exhaust_air = ctk.CTkButton(
+        # 🧹 Quick RAM Purge Button
+        self.btn_quick_ram = ctk.CTkButton(
             btn_box,
-            text="💨 Exhaust Hot Air (25s)",
+            text="🧹 Quick RAM Flush",
             font=ctk.CTkFont(size=11, weight="bold"),
             fg_color=NEON_CYAN,
             hover_color="#00b0ff",
             text_color="black",
             corner_radius=8,
             height=32,
-            command=self._on_exhaust_air_purge
+            command=self._on_quick_ram_flush
         )
-        self.btn_exhaust_air.pack(side="left", padx=(0, 6))
+        self.btn_quick_ram.pack(side="left", padx=(0, 6))
 
         # ⚡ Master Cool Down & RAM Purge Button
         self.btn_master_cool = ctk.CTkButton(
@@ -292,39 +291,10 @@ class DashboardView(ctk.CTkScrollableFrame):
     def _on_elevate_admin(self):
         restart_as_admin()
 
-    def _on_exhaust_air_purge(self):
-        res = ThermalReliefEngine.trigger_exhaust_hot_air(self.top_culprits_cache)
+    def _on_quick_ram_flush(self):
+        freed = purge_all_background_ram(self.top_culprits_cache)
         if self.on_toast:
-            self.on_toast("💨 Hot Air Exhaust", res["message"])
-        self._check_exhaust_cooldown_tick()
-
-    def _check_exhaust_cooldown_tick(self):
-        rem = ThermalReliefEngine.get_exhaust_remaining_cooldown()
-        if rem > 0:
-            if ThermalReliefEngine.is_exhausting:
-                self.btn_exhaust_air.configure(
-                    state="disabled",
-                    fg_color="#004433",
-                    text_color=NEON_GREEN,
-                    text=f"⏳ Purging Air ({rem - 95}s)..." if rem > 95 else f"⏳ Purging Air ({rem}s)..."
-                )
-            else:
-                self.btn_exhaust_air.configure(
-                    state="disabled",
-                    fg_color="#222222",
-                    text_color=DYNAMIC_GRAY,
-                    text=f"🔒 Cooldown ({rem}s)"
-                )
-        else:
-            self.btn_exhaust_air.configure(
-                state="normal",
-                fg_color=NEON_CYAN,
-                text_color="black",
-                text="💨 Exhaust Hot Air (25s)"
-            )
-
-        # Re-check every second
-        self.after(1000, self._check_exhaust_cooldown_tick)
+            self.on_toast("🧹 Quick RAM Flush", f"Reclaimed ~{freed:.0f} MB memory from background processes.")
 
     def update_telemetry(self, telemetry: Dict[str, Any], culprits: List[Dict[str, Any]], diagnostics: Dict[str, Any]):
         self.top_culprits_cache = culprits
@@ -335,7 +305,7 @@ class DashboardView(ctk.CTkScrollableFrame):
         gpu_t = telemetry.get("gpu_temp", 22.0)
         gpu_l = telemetry.get("gpu_load", 0.0)
         fan_rpm = telemetry.get("fan_rpm", 0)
-        fan_status = telemetry.get("fan_status", "0 RPM (Silent)")
+        fan_status = telemetry.get("fan_status", "0 RPM (Silent / Standby)")
         pwr = telemetry.get("cpu_power", 8.0)
         freq = telemetry.get("cpu_freq_mhz", 2400.0)
         is_adm = telemetry.get("is_admin", False)
@@ -353,11 +323,11 @@ class DashboardView(ctk.CTkScrollableFrame):
         self.card_gpu["val"].configure(text=f"{gpu_t:.1f}°C")
         self.card_gpu["sub"].configure(text=f"Load: {gpu_l:.0f}%")
 
-        if fan_rpm == 0:
-            self.card_fan["val"].configure(text="0 RPM")
-            self.card_fan["sub"].configure(text="Fan Stopped / Silent")
-        else:
+        if fan_rpm > 0:
             self.card_fan["val"].configure(text=f"{fan_rpm} RPM")
+            self.card_fan["sub"].configure(text="Hardware Direct Sensor")
+        else:
+            self.card_fan["val"].configure(text="0 RPM")
             self.card_fan["sub"].configure(text=fan_status)
 
         self.card_power["val"].configure(text=f"{pwr:.1f} W")

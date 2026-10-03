@@ -1,7 +1,7 @@
 """
 Hardware Sensor & Telemetry Engine (High Precision Ring-0 + Accurate User-Mode Fallback)
 PC Thermal Guard Pro
-Master Manikant Yadav Ecosystem
+Master Manikant Yadav Ecosystem (FrankBase Suite)
 """
 import os
 import sys
@@ -65,7 +65,7 @@ class HardwareSensorEngine:
             'gpu_load': 0.0,
             'gpu_power': 5.0,
             'fan_rpm': 0,
-            'fan_status': '0 RPM (Silent / Off)',
+            'fan_status': '0 RPM (Silent / Standby)',
             'mobo_temp': 24.0,
             'is_throttling': False,
             'source': 'LibreHardwareMonitor (Ring-0)' if self.is_admin_mode else 'User Mode (Estimated)',
@@ -148,7 +148,8 @@ class HardwareSensorEngine:
         gpu_temp = None
         gpu_load = 0.0
         gpu_power = None
-        fan_rpm = None
+        fan_rpm = 0
+        fan_str = "0 RPM (Silent / Standby)"
         mobo_temp = None
         source = 'User Mode (Estimated)'
 
@@ -199,34 +200,24 @@ class HardwareSensorEngine:
             except Exception:
                 pass
 
-        # 2. Realistic Fallback when in User Mode
+        # 2. Transparent Fallback when in User Mode
         if cpu_temp is None or cpu_temp <= 0:
-            # Baseline ambient when PC is cold
-            base_ambient = 20.0
+            base_ambient = 22.0
             freq_max = cpu_freq_info.max if (cpu_freq_info and cpu_freq_info.max and cpu_freq_info.max > 0) else 2500.0
             freq_ratio = (cpu_freq / freq_max)
-            estimated_temp = base_ambient + (cpu_load * 0.45) + (freq_ratio * 4.0)
+            estimated_temp = base_ambient + (cpu_load * 0.40) + (freq_ratio * 3.5)
             cpu_temp = round(estimated_temp, 1)
-            cpu_temp_max = round(cpu_temp + 2.5, 1)
-            source = 'User Mode (Estimated) : Run as Admin for Exact Sensors'
+            cpu_temp_max = round(cpu_temp + 2.0, 1)
+            source = 'User Mode (Estimated) : Run as Admin for Silicon Sensors'
 
         if gpu_temp is None:
             gpu_temp = round(max(18.0, cpu_temp - 2.0 + (gpu_load * 0.25)), 1)
 
-        # 3. Fan Speed Precision
-        if fan_rpm is None:
-            if cpu_temp < 42.0 and cpu_load < 20.0:
-                fan_rpm = 0
-                fan_str = "0 RPM (Silent / Off)"
-            elif cpu_temp < 55.0:
-                fan_rpm = int(600 + ((cpu_temp - 42.0) / 13.0) * 600)
-                fan_str = f"{fan_rpm} RPM (Quiet)"
-            else:
-                t_ratio = max(0.0, min(1.0, (cpu_temp - 55.0) / 35.0))
-                fan_rpm = int(1200 + (t_ratio * 2000))
-                fan_str = f"{fan_rpm} RPM (Active Cooling)"
+        # 3. Transparent Fan Speed Handling (No fake numbers)
+        if fan_rpm > 0:
+            fan_str = f"{fan_rpm} RPM (Hardware Direct)"
         else:
-            fan_str = f"{fan_rpm} RPM (Hardware Direct)" if fan_rpm > 0 else "0 RPM (Silent / Off)"
+            fan_str = "0 RPM (Silent / Standby)" if self.is_admin_mode else "0 RPM (Sensor N/A in User Mode)"
 
         if mobo_temp is None:
             mobo_temp = round(max(18.0, cpu_temp - 4.0), 1)

@@ -3,11 +3,15 @@ Developer, Ecosystem & Offline License Activation View
 PC Thermal Guard Pro
 Master Manikant Yadav Ecosystem (FrankBase Suite)
 """
+import os
+import platform
+import psutil
 import customtkinter as ctk
 import webbrowser
 from src.ui.theme import ThemeManager, NEON_CYAN, NEON_MAGENTA, NEON_GREEN, BG_COLOR, FRAME_BG, BORDER_COLOR, TEXT_COLOR, DYNAMIC_GRAY
 from src.core.machine_id import get_machine_hardware_id, copy_machine_id_to_clipboard
 from src.core.licensing import LicenseManager
+from src.core.logger import get_log_file_path
 
 class AboutAndLicenseView(ctk.CTkScrollableFrame):
     def __init__(self, parent, toast_callback=None, **kwargs):
@@ -29,7 +33,7 @@ class AboutAndLicenseView(ctk.CTkScrollableFrame):
         # ── Heading ──
         lbl_title = ctk.CTkLabel(
             self,
-            text="🔑 License Activation & 👨‍💻 Founder Community",
+            text="🔑 License Activation & 👨‍💻 Support Center",
             font=ctk.CTkFont(size=18, weight="bold"),
             text_color=TEXT_COLOR
         )
@@ -84,9 +88,9 @@ class AboutAndLicenseView(ctk.CTkScrollableFrame):
         ).pack(anchor="w", padx=15, pady=(12, 4))
 
         disc_desc = (
-            "We value honest user feedback over fake reviews. Share 1-2 simple suggestions on our official portal "
-            "and instantly get a 50% Discount Coupon for Pro Lifetime Edition!\n\n"
-            "• Early Beta Tester Base Discount: 30% Flat (Just for using the app)\n"
+            "We value honest user feedback over fake ratings. Share 1-2 quick suggestions on our official portal "
+            "and instantly receive a 50% Discount Coupon for Pro Lifetime Edition!\n\n"
+            "• Early Beta Tester Base Discount: 30% Flat (Just for testing the app)\n"
             "• Quick Feedback Discount: 50% Super Community Discount (Takes ≤2 mins)\n"
             "⚠️ Note: The 50% discount coupon code is locked and valid strictly for this Device ID only."
         )
@@ -160,9 +164,62 @@ class AboutAndLicenseView(ctk.CTkScrollableFrame):
         )
         btn_activate.pack(side="right")
 
-        # ── Card 4: Founder Credibility & Developer Info ──
+        # ── Card 4: Diagnostics Logs & Developer Support ──
+        card_logs = ctk.CTkFrame(self, fg_color=FRAME_BG, corner_radius=10, border_width=1, border_color=BORDER_COLOR)
+        card_logs.pack(fill="x", padx=15, pady=6)
+
+        ctk.CTkLabel(
+            card_logs,
+            text="🛠️ Diagnostic Logs & Developer Support:",
+            font=ctk.CTkFont(size=13, weight="bold"),
+            text_color=TEXT_COLOR
+        ).pack(anchor="w", padx=15, pady=(12, 4))
+
+        ctk.CTkLabel(
+            card_logs,
+            text="If you experience any sensor errors or unexpected behavior, you can easily open your local log files or copy system debug info to share with our support desk:",
+            font=ctk.CTkFont(size=11),
+            text_color=DYNAMIC_GRAY,
+            wraplength=660,
+            justify="left"
+        ).pack(anchor="w", padx=15, pady=(0, 10))
+
+        row_log_btns = ctk.CTkFrame(card_logs, fg_color="transparent")
+        row_log_btns.pack(fill="x", padx=15, pady=(0, 14))
+
+        btn_open_logs = ctk.CTkButton(
+            row_log_btns,
+            text="📂 Open Logs Folder",
+            height=32,
+            corner_radius=6,
+            fg_color=BG_COLOR,
+            border_width=1,
+            border_color=BORDER_COLOR,
+            text_color=TEXT_COLOR,
+            hover_color="#003344",
+            font=ctk.CTkFont(size=11, weight="bold"),
+            command=self._on_open_logs_folder
+        )
+        btn_open_logs.pack(side="left", padx=(0, 8))
+
+        btn_copy_debug = ctk.CTkButton(
+            row_log_btns,
+            text="📋 Copy Debug System Info",
+            height=32,
+            corner_radius=6,
+            fg_color=BG_COLOR,
+            border_width=1,
+            border_color=BORDER_COLOR,
+            text_color=TEXT_COLOR,
+            hover_color="#003344",
+            font=ctk.CTkFont(size=11, weight="bold"),
+            command=self._on_copy_debug_info
+        )
+        btn_copy_debug.pack(side="left")
+
+        # ── Card 5: Founder Credibility & Official Links ──
         card_founder = ctk.CTkFrame(self, fg_color=FRAME_BG, corner_radius=10, border_width=1, border_color=BORDER_COLOR)
-        card_founder.pack(fill="x", padx=15, pady=6)
+        card_founder.pack(fill="x", padx=15, pady=(6, 20))
 
         lbl_dev_head = ctk.CTkLabel(
             card_founder,
@@ -186,52 +243,39 @@ class AboutAndLicenseView(ctk.CTkScrollableFrame):
             font=ctk.CTkFont(size=11),
             text_color=DYNAMIC_GRAY
         )
-        lbl_desk.pack(anchor="w", padx=15, pady=(1, 12))
+        lbl_desk.pack(anchor="w", padx=15, pady=(1, 8))
 
-        # ── Card 5: Official Sister Ecosystem Portals ──
-        card_links = ctk.CTkFrame(self, fg_color=FRAME_BG, corner_radius=10, border_width=1, border_color=BORDER_COLOR)
-        card_links.pack(fill="x", padx=15, pady=(6, 20))
+        # Only 2 clean official links
+        row_links = ctk.CTkFrame(card_founder, fg_color="transparent")
+        row_links.pack(fill="x", padx=15, pady=(2, 14))
 
-        lbl_links_title = ctk.CTkLabel(
-            card_links,
-            text="🌐 FrankBase Official Sister Ecosystem Portals:",
-            font=ctk.CTkFont(size=13, weight="bold"),
-            text_color=TEXT_COLOR
-        )
-        lbl_links_title.pack(anchor="w", padx=15, pady=(12, 6))
+        ctk.CTkButton(
+            row_links,
+            text="🌐 MasterManikant.com",
+            height=32,
+            corner_radius=6,
+            fg_color=BG_COLOR,
+            text_color=TEXT_COLOR,
+            hover_color="#003344",
+            border_width=1,
+            border_color=BORDER_COLOR,
+            font=ctk.CTkFont(size=11),
+            command=lambda: webbrowser.open("https://mastermanikant.com")
+        ).pack(side="left", expand=True, fill="x", padx=(0, 4))
 
-        grid_links = ctk.CTkFrame(card_links, fg_color="transparent")
-        grid_links.pack(fill="x", padx=15, pady=(0, 14))
-
-        links = [
-            ("🌐 MasterManikant.com", "https://mastermanikant.com"),
-            ("🛍️ FrankBase Digital Store", "https://store.frankbase.com"),
-            ("🏢 FrankBase Agency", "https://digital.frankbase.com"),
-            ("📚 EnglishVidya Hub", "https://englishvidya.com"),
-            ("⭐ Leave Honest Review (Get 20% Bonus)", "https://store.frankbase.com/review"),
-            ("🛡️ Anti-Piracy Bounty Program", "https://store.frankbase.com/report-piracy"),
-        ]
-
-        for i, (title, url) in enumerate(links):
-            r = i // 2
-            c = i % 2
-            btn = ctk.CTkButton(
-                grid_links,
-                text=title,
-                height=32,
-                corner_radius=6,
-                fg_color=BG_COLOR,
-                text_color=TEXT_COLOR,
-                hover_color="#003344",
-                border_width=1,
-                border_color=BORDER_COLOR,
-                font=ctk.CTkFont(size=11),
-                command=lambda u=url: webbrowser.open(u)
-            )
-            btn.grid(row=r, column=c, padx=5, pady=4, sticky="ew")
-
-        grid_links.grid_columnconfigure(0, weight=1)
-        grid_links.grid_columnconfigure(1, weight=1)
+        ctk.CTkButton(
+            row_links,
+            text="🛍️ FrankBase Digital Store",
+            height=32,
+            corner_radius=6,
+            fg_color=BG_COLOR,
+            text_color=TEXT_COLOR,
+            hover_color="#003344",
+            border_width=1,
+            border_color=BORDER_COLOR,
+            font=ctk.CTkFont(size=11),
+            command=lambda: webbrowser.open("https://store.frankbase.com")
+        ).pack(side="left", expand=True, fill="x", padx=(4, 0))
 
     def _on_copy_hwid(self):
         copy_machine_id_to_clipboard()
@@ -260,3 +304,51 @@ class AboutAndLicenseView(ctk.CTkScrollableFrame):
         else:
             if self.toast:
                 self.toast(f"❌ {msg}")
+
+    def _on_open_logs_folder(self):
+        log_file = get_log_file_path()
+        log_dir = os.path.dirname(log_file)
+        if os.path.exists(log_dir):
+            try:
+                os.startfile(log_dir)
+                if self.toast:
+                    self.toast(f"📂 Opened Logs folder: {log_dir}")
+            except Exception as e:
+                if self.toast:
+                    self.toast(f"⚠️ Error opening folder: {e}")
+        else:
+            if self.toast:
+                self.toast("Log folder not found yet.")
+
+    def _on_copy_debug_info(self):
+        cpu_name = platform.processor() or "Unknown CPU"
+        os_ver = f"{platform.system()} {platform.release()} (Build {platform.version()})"
+        ram_gb = round(psutil.virtual_memory().total / (1024 ** 3), 1)
+        log_file = get_log_file_path()
+
+        debug_text = (
+            f"=== PC Thermal Guard Pro Debug Info ===\n"
+            f"Device ID: {self.hwid}\n"
+            f"License Status: {self.license_mgr.get_license_tier_name()}\n"
+            f"OS: {os_ver}\n"
+            f"CPU: {cpu_name} ({psutil.cpu_count(logical=True)} Cores)\n"
+            f"RAM: {ram_gb} GB\n"
+            f"Log File: {log_file}\n"
+            f"App Version: 1.0.0 Beta\n"
+            f"Support Desk: connect@mastermanikant.com\n"
+            f"========================================"
+        )
+
+        try:
+            import pyperclip
+            pyperclip.copy(debug_text)
+        except Exception:
+            try:
+                import subprocess
+                p = subprocess.Popen(['clip'], stdin=subprocess.PIPE, shell=True)
+                p.communicate(input=debug_text.encode('utf-8'))
+            except Exception:
+                pass
+
+        if self.toast:
+            self.toast("📋 Debug System Info copied to clipboard!")
