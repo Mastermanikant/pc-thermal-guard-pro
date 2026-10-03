@@ -270,10 +270,19 @@ class HistoryView(ctk.CTkFrame):
             culprit = f"{r.get('top_culprit', '')} ({r.get('top_has', 0):.0f}%)"
             diag = r.get("diag_status", "OPTIMAL")
 
-            # Color for status
-            diag_color = "#10b981" if diag == "OPTIMAL" else ("#ef4444" if diag == "CRITICAL" else "#f97316")
+            # Color mapping for scientific statuses
+            if diag == "OPTIMAL":
+                diag_color = "#10b981"
+            elif "HEAVY" in diag:
+                diag_color = "#eab308"
+            elif "ELEVATED" in diag:
+                diag_color = "#f97316"
+            elif "OVERHEAT" in diag or "CRITICAL" in diag:
+                diag_color = "#ef4444"
+            else:
+                diag_color = "#00e5ff"
 
-            vals = [(t_str, 135, ThemeManager.get("text_secondary")), (cpu_t, 85, ThemeManager.get("text_primary")), (cpu_l, 85, ThemeManager.get("text_secondary")), (gpu_t, 85, ThemeManager.get("text_secondary")), (fan_str, 95, ThemeManager.get("text_secondary")), (culprit, 140, ThemeManager.get("text_primary")), (diag, 90, diag_color)]
+            vals = [(t_str, 135, ThemeManager.get("text_secondary")), (cpu_t, 85, ThemeManager.get("text_primary")), (cpu_l, 85, ThemeManager.get("text_secondary")), (gpu_t, 85, ThemeManager.get("text_secondary")), (fan_str, 95, ThemeManager.get("text_secondary")), (culprit, 140, ThemeManager.get("text_primary")), (diag, 110, diag_color)]
 
             for val, width, col in vals:
                 lbl = ctk.CTkLabel(row, text=val, font=ctk.CTkFont(size=11), text_color=col, width=width, anchor="w")

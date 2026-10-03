@@ -129,6 +129,12 @@ class ThermalReliefEngine:
     fan_security_enabled: bool = True       # Enforces 25% stall floor and 75°C emergency override
     emergency_override_temp: float = 75.0  # Temperature that forces 100% fan speed
 
+    # Session Impact & Genuine Benefit Tracking
+    session_ram_reclaimed_mb: float = 0.0
+    session_cooling_interventions: int = 0
+    session_tasks_calmed: int = 0
+    active_work_profile: str = "auto"      # "auto", "multitask", "gaming"
+
     # Exhaust Air Purge Safety Registry
     last_exhaust_time: float = 0.0
     exhaust_duration_sec: int = 25          # Safe air purge duration (25 seconds)
@@ -139,6 +145,21 @@ class ThermalReliefEngine:
     _throttled_registry: Dict[int, Dict[str, Any]] = {}
     _watcher_thread: Optional[threading.Thread] = None
     _lock = threading.Lock()
+
+    @classmethod
+    def get_session_impact_stats(cls) -> Dict[str, Any]:
+        """Returns 100% genuine cumulative protection and savings metrics for this session."""
+        return {
+            "ram_reclaimed_mb": round(cls.session_ram_reclaimed_mb, 1),
+            "cooling_interventions": cls.session_cooling_interventions,
+            "tasks_calmed": cls.session_tasks_calmed,
+            "profile": cls.active_work_profile
+        }
+
+    @classmethod
+    def set_work_profile(cls, profile_key: str):
+        cls.active_work_profile = profile_key
+        logger.info(f"Active work profile switched to: {profile_key}")
 
     @classmethod
     def load_config(cls):
@@ -297,6 +318,11 @@ class ThermalReliefEngine:
         # Execute Windows RAM Purge
         freed_ram_mb = purge_all_background_ram(top_culprits)
 
+        # Track genuine cumulative session savings
+        cls.session_ram_reclaimed_mb += freed_ram_mb
+        cls.session_cooling_interventions += 1
+        cls.session_tasks_calmed += throttled_count
+
         if "soft" in mode_lower:
             mode_name = "🌱 Soft Cool"
             desc = "Idle updaters calmed and memory reclaimed."
@@ -365,6 +391,11 @@ class ThermalReliefEngine:
 
         time.sleep(0.3)
         freed_mb = purge_all_background_ram()
+
+        # Track genuine cumulative session savings
+        cls.session_ram_reclaimed_mb += freed_mb
+        cls.session_cooling_interventions += 1
+        cls.session_tasks_calmed += len(target_pids)
 
         msg = f"🚀 Advance Launchpad Engaged: Cleaned {len(target_pids)} background processes ({', '.join(closed_names[:3]) if closed_names else 'Zero bloat'}) and reclaimed ~{freed_mb:.0f} MB RAM. 100% CPU is ready for your game/editor!"
         logger.info(msg)
