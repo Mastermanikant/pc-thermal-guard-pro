@@ -66,12 +66,16 @@ class HardwareSensorEngine:
             'gpu_power': 5.0,
             'fan_rpm': 0,
             'fan_status': '0 RPM (Silent / Standby)',
+            'ram_used_gb': round(psutil.virtual_memory().used / (1024 ** 3), 1),
+            'ram_total_gb': round(psutil.virtual_memory().total / (1024 ** 3), 1),
+            'ram_pct': round(psutil.virtual_memory().percent, 0),
             'mobo_temp': 24.0,
             'is_throttling': False,
             'source': 'LibreHardwareMonitor (Ring-0)' if self.is_admin_mode else 'User Mode (Estimated)',
             'is_admin': self.is_admin_mode,
             'timestamp': time.time()
         }
+
 
         self._lock = threading.Lock()
         self._stop_event = threading.Event()
