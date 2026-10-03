@@ -32,23 +32,21 @@ class HistoryView(ctk.CTkFrame):
 
         self.chart_title = ctk.CTkLabel(
             self.chart_header,
-            text="📈 Live 60-Minute Thermal Timeline",
+            text="📈 Live Workload & CPU Power Timeline (Dynamic Telemetry)",
             font=ctk.CTkFont(size=14, weight="bold"),
             text_color=ThemeManager.get("text_primary")
         )
         self.chart_title.pack(side="left")
 
-        # High-Contrast Colored Legend Badges
+        # High-Contrast Colored Legend Badges for 2 Dynamic Metrics
         legend_box = ctk.CTkFrame(self.chart_header, fg_color="transparent")
         legend_box.pack(side="right")
 
-        ctk.CTkLabel(legend_box, text="🟦 CPU Temp (°C)", font=ctk.CTkFont(size=11, weight="bold"), text_color="#00e5ff").pack(side="left", padx=4)
+        ctk.CTkLabel(legend_box, text="🟨 CPU Workload (%)", font=ctk.CTkFont(size=11, weight="bold"), text_color="#eab308").pack(side="left", padx=4)
         ctk.CTkLabel(legend_box, text="|", font=ctk.CTkFont(size=11), text_color="#555555").pack(side="left", padx=2)
-        ctk.CTkLabel(legend_box, text="🟨 CPU Load (%)", font=ctk.CTkFont(size=11, weight="bold"), text_color="#eab308").pack(side="left", padx=4)
+        ctk.CTkLabel(legend_box, text="⚡ CPU Power (Watts)", font=ctk.CTkFont(size=11, weight="bold"), text_color="#00e5ff").pack(side="left", padx=4)
         ctk.CTkLabel(legend_box, text="|", font=ctk.CTkFont(size=11), text_color="#555555").pack(side="left", padx=2)
-        ctk.CTkLabel(legend_box, text="🟧 70°C Limit", font=ctk.CTkFont(size=10), text_color="#f97316").pack(side="left", padx=4)
-        ctk.CTkLabel(legend_box, text="|", font=ctk.CTkFont(size=11), text_color="#555555").pack(side="left", padx=2)
-        ctk.CTkLabel(legend_box, text="🟥 85°C Overheat", font=ctk.CTkFont(size=10), text_color="#ef4444").pack(side="left", padx=4)
+        ctk.CTkLabel(legend_box, text="🟧 80% Load Peak", font=ctk.CTkFont(size=10), text_color="#f97316").pack(side="left", padx=4)
 
         # Native Visual Canvas for Chart (High-speed, zero VRAM)
         self.canvas_card = ctk.CTkFrame(
@@ -130,7 +128,7 @@ class HistoryView(ctk.CTkFrame):
         self.update_chart()
 
     def update_chart(self):
-        """Draws real-time temperature curve onto canvas with 1-second rate limiting to prevent UI lockup."""
+        """Draws real-time dynamic workload and power curves with linear precision."""
         now = time.time()
         if now - self._last_chart_draw < 1.0:
             return
@@ -149,28 +147,25 @@ class HistoryView(ctk.CTkFrame):
         grid_col = ThemeManager.get("border")
         canvas.configure(bg=bg_card)
 
-        # <!-- ================= Section: Clean Grid Lines & Thresholds ================= -->
-        t_max = 100.0
-        t_min = 30.0
-
-        def temp_to_y(temp):
-            ratio = max(0.0, min(1.0, (temp - t_min) / (t_max - t_min)))
+        # <!-- ================= Section: Clean Scale & Grid Lines ================= -->
+        def scale_to_y(val, max_scale=100.0):
+            ratio = max(0.0, min(1.0, val / max_scale))
             return h - 25 - (ratio * (h - 45))
 
-        # Threshold line 85°C (Overheat Alert)
-        y85 = temp_to_y(85.0)
-        canvas.create_line(45, y85, w - 15, y85, fill="#ef4444", dash=(4, 4), width=1)
-        canvas.create_text(25, y85, text="85°C", fill="#ef4444", font=("Segoe UI", 9, "bold"))
+        # Threshold line: 80% Heavy Load Peak
+        y80 = scale_to_y(80.0, 100.0)
+        canvas.create_line(45, y80, w - 15, y80, fill="#f97316", dash=(4, 4), width=1)
+        canvas.create_text(25, y80, text="80%", fill="#f97316", font=("Segoe UI", 9, "bold"))
 
-        # Threshold line 70°C (Caution)
-        y70 = temp_to_y(70.0)
-        canvas.create_line(45, y70, w - 15, y70, fill="#f97316", dash=(2, 4), width=1)
-        canvas.create_text(25, y70, text="70°C", fill="#f97316", font=("Segoe UI", 9))
-
-        # Baseline 40°C
-        y40 = temp_to_y(40.0)
+        # Threshold line: 40% Moderate Load
+        y40 = scale_to_y(40.0, 100.0)
         canvas.create_line(45, y40, w - 15, y40, fill=grid_col, dash=(1, 5), width=1)
-        canvas.create_text(25, y40, text="40°C", fill=ThemeManager.get("text_muted"), font=("Segoe UI", 9))
+        canvas.create_text(25, y40, text="40%", fill=ThemeManager.get("text_muted"), font=("Segoe UI", 9))
+
+        # Baseline: 0% / 0W
+        y0 = scale_to_y(0.0, 100.0)
+        canvas.create_line(45, y0, w - 15, y0, fill=grid_col, width=1)
+        canvas.create_text(25, y0, text="0%", fill=ThemeManager.get("text_muted"), font=("Segoe UI", 9))
 
         # Time Scale Axis at Bottom
         y_axis = h - 18
@@ -180,7 +175,7 @@ class HistoryView(ctk.CTkFrame):
         canvas.create_text(w - 25, y_axis + 10, text="Now", fill=ThemeManager.get("text_muted"), font=("Segoe UI", 8, "bold"))
 
         if not samples:
-            canvas.create_text(w / 2, h / 2, text="Sampling real-time telemetry (Updates every second)...", fill=ThemeManager.get("text_muted"), font=("Segoe UI", 11))
+            canvas.create_text(w / 2, h / 2, text="Sampling real-time workload & power data...", fill=ThemeManager.get("text_muted"), font=("Segoe UI", 11))
             return
 
         # Take last 60 samples
@@ -188,7 +183,7 @@ class HistoryView(ctk.CTkFrame):
         recent = samples[-n_samples:]
         step_x = (w - 70) / max(1, n_samples - 1)
 
-        # 3-Point Moving Average filter for CPU Load to prevent random micro-spikes
+        # 3-Point Moving Average for CPU Load
         smoothed_loads = []
         for i in range(len(recent)):
             if i == 0:
@@ -201,36 +196,46 @@ class HistoryView(ctk.CTkFrame):
                        recent[i].get("cpu_load", 0.0) * 0.50)
                 smoothed_loads.append(val)
 
-        # <!-- ================= Section: Precise Linear Plotting ================= -->
-        points_temp = []
+        # <!-- ================= Section: Plotting 2 Dynamic Curves ================= -->
         points_load = []
+        points_power = []
 
         for idx in range(len(recent)):
             s = recent[idx]
             x = 48 + (idx * step_x)
-            yt = temp_to_y(s.get("cpu_temp", 45.0))
-            points_temp.append((x, yt))
 
-            # CPU Load (0 - 100%) mapped accurately
+            # 1. CPU Load % (0 to 100%)
             load_val = smoothed_loads[idx]
-            yl = h - 25 - ((load_val / 100.0) * (h - 45))
+            yl = scale_to_y(load_val, 100.0)
             points_load.append((x, yl))
 
-        # Draw CPU Load line (Yellow - Clean Linear Segment)
+            # 2. CPU Package Power in Watts (0 to 45W max scale for dynamic visibility)
+            pwr_val = s.get("cpu_power", 5.0)
+            yp = scale_to_y(pwr_val, 45.0)
+            points_power.append((x, yp))
+
+        # Draw CPU Package Power line (Neon Cyan - Watts)
+        if len(points_power) > 1:
+            flat_power = [coord for pt in points_power for coord in pt]
+            canvas.create_line(flat_power, fill="#00e5ff", width=2, smooth=False)
+
+        # Draw CPU Workload line (Yellow - Load %)
         if len(points_load) > 1:
             flat_load = [coord for pt in points_load for coord in pt]
-            canvas.create_line(flat_load, fill="#eab308", width=1, smooth=False)
+            canvas.create_line(flat_load, fill="#eab308", width=2, smooth=False)
 
-        # Draw CPU Temp line (Neon Cyan - Clean Solid Polyline)
-        if len(points_temp) > 1:
-            flat_temp = [coord for pt in points_temp for coord in pt]
-            canvas.create_line(flat_temp, fill="#00e5ff", width=2, smooth=False)
+        # Latest Value Badges on rightmost point
+        last_x, last_y_load = points_load[-1]
+        _, last_y_pwr = points_power[-1]
 
-        # Latest Temp & Load Badges on the rightmost data point
-        last_x, last_y = points_temp[-1]
-        last_temp = recent[-1].get("cpu_temp", 45.0)
-        canvas.create_oval(last_x - 4, last_y - 4, last_x + 4, last_y + 4, fill="#00e5ff", outline="#ffffff")
-        canvas.create_text(last_x, max(12, last_y - 12), text=f"{last_temp:.1f}°C", fill="#00e5ff", font=("Segoe UI", 10, "bold"))
+        last_load = smoothed_loads[-1]
+        last_pwr = recent[-1].get("cpu_power", 5.0)
+
+        canvas.create_oval(last_x - 4, last_y_load - 4, last_x + 4, last_y_load + 4, fill="#eab308", outline="#ffffff")
+        canvas.create_text(last_x, max(12, last_y_load - 12), text=f"{last_load:.0f}%", fill="#eab308", font=("Segoe UI", 9, "bold"))
+
+        canvas.create_oval(last_x - 4, last_y_pwr - 4, last_x + 4, last_y_pwr + 4, fill="#00e5ff", outline="#ffffff")
+        canvas.create_text(last_x, min(h - 30, last_y_pwr + 12), text=f"{last_pwr:.1f}W", fill="#00e5ff", font=("Segoe UI", 9, "bold"))
 
     def refresh_log_table(self):
         """Refreshes the SQLite telemetry table."""

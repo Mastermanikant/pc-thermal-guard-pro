@@ -91,6 +91,8 @@ class HistoryManager:
         now = time.time()
         cpu_temp = telemetry.get("cpu_package_temp") or telemetry.get("cpu_temp", 24.0)
         cpu_load = telemetry.get("cpu_load", 0.0)
+        cpu_power = telemetry.get("cpu_power", 0.0)
+        ram_pct = telemetry.get("ram_pct", 0.0)
         gpu_temp = telemetry.get("gpu_temp", 22.0)
         fan_rpm = telemetry.get("fan_rpm", 0)
 
@@ -102,6 +104,8 @@ class HistoryManager:
             "time_str": time.strftime("%H:%M:%S", time.localtime(now)),
             "cpu_temp": cpu_temp,
             "cpu_load": cpu_load,
+            "cpu_power": cpu_power,
+            "ram_pct": ram_pct,
             "gpu_temp": gpu_temp,
             "fan_rpm": fan_rpm,
             "top_culprit": top_name,
