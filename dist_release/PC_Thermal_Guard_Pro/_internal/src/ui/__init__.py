@@ -1,1 +1,0 @@
-﻿"""PC Thermal Guard Pro Package"""
