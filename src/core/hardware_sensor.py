@@ -239,6 +239,16 @@ class HardwareSensorEngine:
         ram_total_gb = round(vmem.total / (1024 ** 3), 1)
         ram_pct = round(vmem.percent, 0)
 
+        battery_pct = None
+        power_plugged = True
+        try:
+            bat = psutil.sensors_battery()
+            if bat:
+                battery_pct = round(bat.percent, 0)
+                power_plugged = bool(bat.power_plugged)
+        except Exception:
+            pass
+
         return {
             'cpu_temp': round(cpu_temp, 1),
             'cpu_temp_max': round(cpu_temp_max or cpu_temp, 1),
@@ -254,6 +264,8 @@ class HardwareSensorEngine:
             'ram_used_gb': ram_used_gb,
             'ram_total_gb': ram_total_gb,
             'ram_pct': ram_pct,
+            'battery_pct': battery_pct,
+            'power_plugged': power_plugged,
             'mobo_temp': round(mobo_temp, 1),
             'is_throttling': is_throttling,
             'source': source,

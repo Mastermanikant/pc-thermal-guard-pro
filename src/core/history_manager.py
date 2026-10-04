@@ -95,6 +95,8 @@ class HistoryManager:
         ram_pct = telemetry.get("ram_pct", 0.0)
         gpu_temp = telemetry.get("gpu_temp", 22.0)
         fan_rpm = telemetry.get("fan_rpm", 0)
+        battery_pct = telemetry.get("battery_pct")
+        power_plugged = telemetry.get("power_plugged", True)
 
         top_name = culprits[0]["name"] if culprits else "System"
         top_has = culprits[0]["heat_score"] if culprits else 0.0
@@ -108,6 +110,8 @@ class HistoryManager:
             "ram_pct": ram_pct,
             "gpu_temp": gpu_temp,
             "fan_rpm": fan_rpm,
+            "battery_pct": battery_pct,
+            "power_plugged": power_plugged,
             "top_culprit": top_name,
             "top_has": top_has,
             "diag_status": diag_status
