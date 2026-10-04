@@ -270,6 +270,11 @@ class HistoryView(ctk.CTkFrame):
             culprit = f"{r.get('top_culprit', '')} ({r.get('top_has', 0):.0f}%)"
             diag = r.get("diag_status", "OPTIMAL")
 
+            # Scientific Calibration: If CPU is cool (<72°C), it is nominal OPTIMAL
+            raw_cpu_temp = float(r.get("cpu_temp") or 0.0)
+            if raw_cpu_temp < 72.0 and "HEAVY" in diag:
+                diag = "OPTIMAL"
+
             # Color mapping for scientific statuses
             if diag == "OPTIMAL":
                 diag_color = "#10b981"
@@ -281,6 +286,7 @@ class HistoryView(ctk.CTkFrame):
                 diag_color = "#ef4444"
             else:
                 diag_color = "#00e5ff"
+
 
             vals = [(t_str, 135, ThemeManager.get("text_secondary")), (cpu_t, 85, ThemeManager.get("text_primary")), (cpu_l, 85, ThemeManager.get("text_secondary")), (gpu_t, 85, ThemeManager.get("text_secondary")), (fan_str, 95, ThemeManager.get("text_secondary")), (culprit, 140, ThemeManager.get("text_primary")), (diag, 110, diag_color)]
 

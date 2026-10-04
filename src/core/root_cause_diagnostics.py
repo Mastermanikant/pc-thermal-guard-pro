@@ -43,28 +43,34 @@ class ThermalDiagnosticEngine:
                 'severity_score': 70
             }
 
-        # 3. Active Multitasking / Heavy Workload (70°C - 84°C or Load >= 50%)
-        if cpu_temp >= 70.0 or cpu_load >= 50.0:
+        # 3. Genuine Heavy Workload / High Thermal Compute (>=78°C OR >=72°C with Load >=85%)
+        if cpu_temp >= 78.0 or (cpu_temp >= 72.0 and cpu_load >= 85.0):
             return {
                 'status': 'HEAVY LOAD',
                 'badge_color': '#eab308',
-                'headline': f'⚡ Active Multitasking / Compute Load',
-                'explanation': f'{top_desc} is utilizing compute resources ({cpu_temp:.1f}°C, {cpu_load:.0f}% load). 100% normal and safe operating range for Intel & Ryzen Boost.',
+                'headline': f'⚡ Active Compute Workload ({cpu_temp:.1f}°C)',
+                'explanation': f'{top_desc} is utilizing compute resources ({cpu_temp:.1f}°C, {cpu_load:.0f}% load). Safe operating range for Intel & Ryzen Boost.',
                 'offending_app': top_app,
                 'recommendation': 'All systems operating normally. Active foreground application is 100% prioritized.',
                 'severity_score': 35
             }
 
-        # 4. Nominal Safe & Cool State (<70°C)
+        # 4. Nominal Safe & Cool State (<78°C)
+        if cpu_load >= 50.0:
+            desc = f'Hardware running at a safe {cpu_temp:.1f}°C with active background multitasking ({cpu_load:.0f}% compute).'
+        else:
+            desc = f'Hardware running at a safe {cpu_temp:.1f}°C with {cpu_load:.0f}% load. Background activity is calm.'
+
         return {
             'status': 'OPTIMAL',
             'badge_color': '#10b981',
             'headline': '✅ System Cool & Healthy',
-            'explanation': f'Hardware running at a safe {cpu_temp:.1f}°C with {cpu_load:.0f}% load. Background activity is calm.',
+            'explanation': desc,
             'offending_app': 'None',
             'recommendation': 'No action required. Real-time background guard is active in low-overhead mode.',
             'severity_score': 10
         }
+
 
     # Alias for convenience
     diagnose = evaluate_diagnostics
