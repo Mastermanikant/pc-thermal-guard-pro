@@ -75,22 +75,7 @@ class TopCollapsibleHeader(ctk.CTkFrame):
         )
         self.btn_plan_badge.pack(side="left", padx=6)
 
-        # 3. Right Controls: Theme Switch & System Tray
-        self.btn_tray = ctk.CTkButton(
-            self.header_inner,
-            text="📥 Tray",
-            width=70,
-            height=30,
-            corner_radius=6,
-            fg_color=BG_COLOR,
-            text_color=TEXT_COLOR,
-            hover_color=NEON_CYAN,
-            font=ctk.CTkFont(size=11, weight="bold"),
-            command=self.on_minimize_tray
-        )
-        self.btn_tray.pack(side="right", padx=(6, 0))
-
-        # Day/Night Mode Switch
+        # 3. Right Controls: Theme Switch
         self.theme_box = ctk.CTkFrame(self.header_inner, fg_color=BG_COLOR, corner_radius=20, border_width=1, border_color=BORDER_COLOR)
         self.theme_box.pack(side="right", padx=6)
 

@@ -19,64 +19,58 @@ class ThermalDiagnosticEngine:
         top_desc = culprits[0]['description'] if culprits else 'System Idle'
         top_has = culprits[0]['heat_score'] if culprits else 0.0
 
-        # Thermal Throttling Active
-        if is_throttling or cpu_temp >= 90.0:
+        # 1. Thermal Throttling / Emergency Heat (>=92°C)
+        if is_throttling or cpu_temp >= 92.0:
             return {
-                'status': 'CRITICAL',
+                'status': 'OVERHEAT',
                 'badge_color': '#ef4444',
-                'headline': '🔥 Thermal Throttling Active!',
-                'explanation': f'System reached {cpu_temp}°C. The processor is reducing clock speed to avoid damage. Top impact: {top_desc} ({top_has}% Heat).',
+                'headline': '🔥 Thermal Throttle Threshold Reached',
+                'explanation': f'CPU reached {cpu_temp:.1f}°C. Clock frequency reduced to protect silicon. Top impact: {top_desc} ({top_has}% Heat).',
                 'offending_app': top_app,
-                'recommendation': 'Click 1-Click Cool Down & RAM Purge to throttle heavy background apps.',
+                'recommendation': 'Trigger Smart Cool Down or Advance Launchpad to immediately relieve heat.',
                 'severity_score': 90
             }
 
-        # Poor Heat Dissipation
-        if cpu_temp >= 78.0 and cpu_load <= 25.0:
-            return {
-                'status': 'WARNING',
-                'badge_color': '#f97316',
-                'headline': '⚠️ Elevated Idle Temperature',
-                'explanation': f'CPU load is only {cpu_load}%, yet temperature is elevated at {cpu_temp}°C.',
-                'offending_app': top_app,
-                'recommendation': 'Check that air vents are not obstructed with dust and ambient room temperature is moderate.',
-                'severity_score': 75
-            }
-
-        # Rogue Background Process
-        if cpu_temp >= 70.0 and cpu_load >= 60.0 and top_app.lower() not in ['blender.exe', 'adobe premiere pro.exe', 'photoshop.exe', 'steam.exe']:
-            return {
-                'status': 'WARNING',
-                'badge_color': '#f97316',
-                'headline': f'⚠️ High Heat from {top_desc}',
-                'explanation': f'{top_desc} ({top_app}) is consuming system resources causing {top_has}% of thermal generation ({cpu_temp}°C).',
-                'offending_app': top_app,
-                'recommendation': f'Click Relieve to throttle {top_app} or use 1-Click Cool Down.',
-                'severity_score': 65
-            }
-
-        # Heavy Workload in Progress
-        if cpu_temp >= 68.0 and cpu_load >= 50.0:
+        # 2. Elevated Thermal State (85°C - 91°C)
+        if cpu_temp >= 85.0:
             return {
                 'status': 'ELEVATED',
-                'badge_color': '#eab308',
-                'headline': 'ℹ️ High Compute Workload in Progress',
-                'explanation': f'Active task {top_desc} is utilizing CPU power. Temperature ({cpu_temp}°C) is normal for heavy compute.',
+                'badge_color': '#f97316',
+                'headline': f'⚡ Elevated Thermal Load ({cpu_temp:.1f}°C)',
+                'explanation': f'High compute burst detected ({top_desc}). System is running hot but hardware thermal guard is active.',
                 'offending_app': top_app,
-                'recommendation': 'Ensure PC air vents are unblocked for continuous optimal airflow.',
-                'severity_score': 40
+                'recommendation': 'Optional: Click Smart Cool Down if you are not running an intentional heavy render.',
+                'severity_score': 70
             }
 
-        # Nominal Safe Condition
+        # 3. Genuine Heavy Workload / High Thermal Compute (>=78°C OR >=72°C with Load >=85%)
+        if cpu_temp >= 78.0 or (cpu_temp >= 72.0 and cpu_load >= 85.0):
+            return {
+                'status': 'HEAVY LOAD',
+                'badge_color': '#eab308',
+                'headline': f'⚡ Active Compute Workload ({cpu_temp:.1f}°C)',
+                'explanation': f'{top_desc} is utilizing compute resources ({cpu_temp:.1f}°C, {cpu_load:.0f}% load). Safe operating range for Intel & Ryzen Boost.',
+                'offending_app': top_app,
+                'recommendation': 'All systems operating normally. Active foreground application is 100% prioritized.',
+                'severity_score': 35
+            }
+
+        # 4. Nominal Safe & Cool State (<78°C)
+        if cpu_load >= 50.0:
+            desc = f'Hardware running at a safe {cpu_temp:.1f}°C with active background multitasking ({cpu_load:.0f}% compute).'
+        else:
+            desc = f'Hardware running at a safe {cpu_temp:.1f}°C with {cpu_load:.0f}% load. Background activity is calm.'
+
         return {
             'status': 'OPTIMAL',
             'badge_color': '#10b981',
-            'headline': '✅ System Cool and Healthy',
-            'explanation': f'CPU temperature is at a safe {cpu_temp}°C with {cpu_load}% total load. Cooling state is nominal.',
+            'headline': '✅ System Cool & Healthy',
+            'explanation': desc,
             'offending_app': 'None',
-            'recommendation': 'No action required. Thermal Guard is actively monitoring in low-overhead mode.',
+            'recommendation': 'No action required. Real-time background guard is active in low-overhead mode.',
             'severity_score': 10
         }
+
 
     # Alias for convenience
     diagnose = evaluate_diagnostics

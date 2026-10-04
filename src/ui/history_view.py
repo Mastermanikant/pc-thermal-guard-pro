@@ -1,5 +1,5 @@
 """
-History & Multi-Metric Visual Telemetry Bar Chart View
+History & Multi-Metric Live Vertical Level Meter View
 PC Thermal Guard Pro
 Master Manikant Yadav Ecosystem (FrankBase Suite)
 """
@@ -16,66 +16,50 @@ class HistoryView(ctk.CTkFrame):
         super().__init__(master, fg_color="transparent", **kwargs)
         self.history_manager = history_manager
         self.on_toast = on_toast
-        
-        self.selected_metric = "cpu_temp"  # Options: 'cpu_temp', 'cpu_load', 'ram_pct', 'battery_pct'
         self._last_chart_draw = 0.0
         
         self._build_ui()
 
     def _build_ui(self):
-        # 1. Top Section: 5 Multi-Metric Live Health Bar Cards
-        self.cards_strip = ctk.CTkFrame(self, fg_color="transparent")
-        self.cards_strip.pack(fill="x", padx=10, pady=(0, 8))
-
-        # 5 Mini Cards
-        self.card_cpu_temp = self._create_mini_metric_card(self.cards_strip, "🔥 CPU TEMP", "0.0°C", "#00e5ff")
-        self.card_gpu_temp = self._create_mini_metric_card(self.cards_strip, "🎮 GPU TEMP", "0.0°C", "#10b981")
-        self.card_ram_pct = self._create_mini_metric_card(self.cards_strip, "💾 RAM USAGE", "0%", "#a855f7")
-        self.card_cpu_load = self._create_mini_metric_card(self.cards_strip, "⚡ CPU LOAD", "0%", "#eab308")
-        self.card_power = self._create_mini_metric_card(self.cards_strip, "🔋 POWER / BAT", "100%", "#38bdf8")
-
-        # 2. Middle Section: Historical Bar Chart Header with Metric Selector Tabs
-        self.chart_header = ctk.CTkFrame(self, fg_color="transparent")
-        self.chart_header.pack(fill="x", padx=10, pady=(4, 6))
-
-        self.chart_title = ctk.CTkLabel(
-            self.chart_header,
-            text="📊 Historical Telemetry Bar Visualizer (Histogram)",
-            font=ctk.CTkFont(size=13, weight="bold"),
-            text_color=ThemeManager.get("text_primary")
-        )
-        self.chart_title.pack(side="left")
-
-        # Metric Selector Pill Buttons
-        tabs_box = ctk.CTkFrame(self.chart_header, fg_color="transparent")
-        tabs_box.pack(side="right")
-
-        self.btn_tab_temp = self._create_tab_button(tabs_box, "🔥 Temp (°C)", "cpu_temp")
-        self.btn_tab_load = self._create_tab_button(tabs_box, "⚡ CPU Load (%)", "cpu_load")
-        self.btn_tab_ram = self._create_tab_button(tabs_box, "💾 RAM (%)", "ram_pct")
-        self.btn_tab_bat = self._create_tab_button(tabs_box, "🔋 Battery (%)", "battery_pct")
-
-        self._highlight_active_tab()
-
-        # Canvas Container Card for Bar Chart
-        self.canvas_card = ctk.CTkFrame(
+        # ── 1. Top Section: Live Real-Time Multi-Sensor Vertical Meter Board ──
+        self.meter_card = ctk.CTkFrame(
             self,
             fg_color=ThemeManager.get("bg_card"),
             corner_radius=12,
             border_width=1,
             border_color=ThemeManager.get("border")
         )
-        self.canvas_card.pack(fill="x", padx=10, pady=(0, 8))
+        self.meter_card.pack(fill="x", padx=10, pady=(4, 8))
 
-        self.chart_canvas = tk.Canvas(
-            self.canvas_card,
-            height=150,
+        meter_hdr = ctk.CTkFrame(self.meter_card, fg_color="transparent")
+        meter_hdr.pack(fill="x", padx=15, pady=(10, 4))
+
+        self.lbl_meter_title = ctk.CTkLabel(
+            meter_hdr,
+            text="📊 Live Real-Time Multi-Sensor Level Meters",
+            font=ctk.CTkFont(size=14, weight="bold"),
+            text_color=ThemeManager.get("text_primary")
+        )
+        self.lbl_meter_title.pack(side="left")
+
+        self.lbl_meter_sub = ctk.CTkLabel(
+            meter_hdr,
+            text="0-100 Dynamic Scale (Real-Time Live Gauge)",
+            font=ctk.CTkFont(size=11, slant="italic"),
+            text_color=ThemeManager.get("text_muted")
+        )
+        self.lbl_meter_sub.pack(side="right")
+
+        # Canvas for Drawing Live Dynamic Vertical Level Meters
+        self.meter_canvas = tk.Canvas(
+            self.meter_card,
+            height=190,
             bg=ThemeManager.get("bg_card"),
             highlightthickness=0
         )
-        self.chart_canvas.pack(fill="both", expand=True, padx=12, pady=8)
+        self.meter_canvas.pack(fill="both", expand=True, padx=12, pady=(2, 10))
 
-        # 3. Bottom Section: 7-Day Rolling SQLite Telemetry Ledger
+        # ── 2. Bottom Section: 7-Day Rolling SQLite Telemetry Ledger ──
         self.log_header = ctk.CTkFrame(self, fg_color="transparent")
         self.log_header.pack(fill="x", padx=10, pady=(4, 4))
 
@@ -126,89 +110,26 @@ class HistoryView(ctk.CTkFrame):
             corner_radius=12,
             border_width=1,
             border_color=ThemeManager.get("border"),
-            height=140
+            height=160
         )
         self.log_table_frame.pack(fill="both", expand=True, padx=10, pady=(0, 8))
 
         self.refresh_log_table()
-
-    def _create_mini_metric_card(self, parent, title: str, init_val: str, accent_color: str):
-        card = ctk.CTkFrame(
-            parent,
-            fg_color=ThemeManager.get("bg_card"),
-            corner_radius=10,
-            border_width=1,
-            border_color=ThemeManager.get("border")
-        )
-        card.pack(side="left", fill="both", expand=True, padx=3)
-
-        inner = ctk.CTkFrame(card, fg_color="transparent")
-        inner.pack(fill="both", expand=True, padx=8, pady=6)
-
-        lbl_t = ctk.CTkLabel(inner, text=title, font=ctk.CTkFont(size=9, weight="bold"), text_color=ThemeManager.get("text_muted"))
-        lbl_t.pack(anchor="w")
-
-        lbl_v = ctk.CTkLabel(inner, text=init_val, font=ctk.CTkFont(size=13, weight="bold"), text_color=accent_color)
-        lbl_v.pack(anchor="w", pady=(1, 3))
-
-        # Mini Progress Bar
-        bar = ctk.CTkProgressBar(inner, height=4, corner_radius=2, progress_color=accent_color, fg_color="#1e293b")
-        bar.pack(fill="x")
-        bar.set(0.0)
-
-        card.lbl_val = lbl_v
-        card.bar = bar
-        card.accent_color = accent_color
-        return card
-
-    def _create_tab_button(self, parent, text: str, metric_key: str):
-        btn = ctk.CTkButton(
-            parent,
-            text=text,
-            font=ctk.CTkFont(size=10, weight="bold"),
-            height=24,
-            width=85,
-            corner_radius=6,
-            fg_color="transparent",
-            border_width=1,
-            border_color=ThemeManager.get("border"),
-            text_color=ThemeManager.get("text_muted"),
-            command=lambda: self._set_active_metric(metric_key)
-        )
-        btn.pack(side="left", padx=2)
-        return btn
-
-    def _set_active_metric(self, metric_key: str):
-        self.selected_metric = metric_key
-        self._highlight_active_tab()
         self.update_chart(force=True)
 
-    def _highlight_active_tab(self):
-        tabs = [
-            (self.btn_tab_temp, "cpu_temp"),
-            (self.btn_tab_load, "cpu_load"),
-            (self.btn_tab_ram, "ram_pct"),
-            (self.btn_tab_bat, "battery_pct")
-        ]
-        for btn, key in tabs:
-            if key == self.selected_metric:
-                btn.configure(fg_color="#0284c7", text_color="#ffffff", border_color="#00e5ff")
-            else:
-                btn.configure(fg_color="transparent", text_color=ThemeManager.get("text_muted"), border_color=ThemeManager.get("border"))
-
     def update_live_chart(self):
-        """Alias for real-time live chart updates."""
+        """Alias for real-time live meter updates."""
         self.update_chart()
 
     def update_chart(self, force: bool = False):
-        """Renders dynamic multi-metric vertical bar histogram with color gradients."""
+        """Renders 5 dynamic live vertical level meters on 0-100 scale."""
         now = time.time()
-        if not force and (now - self._last_chart_draw < 1.0):
+        if not force and (now - self._last_chart_draw < 0.6):
             return
         self._last_chart_draw = now
 
         samples = self.history_manager.get_recent_ring_buffer()
-        canvas = self.chart_canvas
+        canvas = self.meter_canvas
         w = canvas.winfo_width()
         h = canvas.winfo_height()
 
@@ -218,125 +139,122 @@ class HistoryView(ctk.CTkFrame):
         canvas.delete("all")
         bg_card = ThemeManager.get("bg_card")
         grid_col = ThemeManager.get("border")
+        txt_muted = ThemeManager.get("text_muted")
+        txt_pri = ThemeManager.get("text_primary")
         canvas.configure(bg=bg_card)
 
-        # 1. Update Mini Top Cards with Latest Telemetry
+        # Extract latest readings
+        c_temp = 24.0
+        g_temp = 22.0
+        c_load = 0.0
+        r_pct = 0.0
+        bat_pct = 100.0
+        power_plugged = True
+
         if samples:
             latest = samples[-1]
-            c_temp = latest.get("cpu_temp", 0.0)
-            g_temp = latest.get("gpu_temp", 0.0)
-            r_pct = latest.get("ram_pct", 0.0)
-            c_load = latest.get("cpu_load", 0.0)
-            c_pwr = latest.get("cpu_power", 0.0)
-            bat_pct = latest.get("battery_pct")
-            plugged = latest.get("power_plugged", True)
+            c_temp = float(latest.get("cpu_temp", 24.0))
+            g_temp = float(latest.get("gpu_temp", 22.0))
+            c_load = float(latest.get("cpu_load", 0.0))
+            r_pct = float(latest.get("ram_pct", 0.0))
+            bat_pct = float(latest.get("battery_pct") if latest.get("battery_pct") is not None else 100.0)
+            power_plugged = latest.get("power_plugged", True)
 
-            self.card_cpu_temp.lbl_val.configure(text=f"{c_temp:.1f}°C")
-            self.card_cpu_temp.bar.set(min(1.0, c_temp / 100.0))
+        # Helper scale calculation (Y position from value 0 to 100)
+        y_top = 30
+        y_bottom = h - 35
+        usable_h = y_bottom - y_top
 
-            self.card_gpu_temp.lbl_val.configure(text=f"{g_temp:.1f}°C")
-            self.card_gpu_temp.bar.set(min(1.0, g_temp / 100.0))
+        def val_to_y(val):
+            ratio = max(0.0, min(1.0, val / 100.0))
+            return y_bottom - (ratio * usable_h)
 
-            self.card_ram_pct.lbl_val.configure(text=f"{r_pct:.0f}%")
-            self.card_ram_pct.bar.set(min(1.0, r_pct / 100.0))
+        # 1. Draw 0 to 100 Scale Guidelines on Left Axis
+        scale_steps = [(100, "100"), (75, "75"), (50, "50"), (25, "25"), (0, "0")]
+        for step_val, label_text in scale_steps:
+            y_pos = val_to_y(step_val)
+            dash_pattern = (4, 4) if step_val == 75 else (1, 4)
+            line_color = "#f97316" if step_val == 75 else grid_col
+            canvas.create_line(46, y_pos, w - 20, y_pos, fill=line_color, dash=dash_pattern, width=1)
+            canvas.create_text(24, y_pos, text=label_text, fill=line_color, font=("Segoe UI", 9, "bold" if step_val == 75 else "normal"))
 
-            self.card_cpu_load.lbl_val.configure(text=f"{c_load:.0f}% ({c_pwr:.1f}W)")
-            self.card_cpu_load.bar.set(min(1.0, c_load / 100.0))
+        # Baseline axis
+        canvas.create_line(46, y_bottom, w - 20, y_bottom, fill=grid_col, width=1.5)
 
-            if bat_pct is not None:
-                state_str = "AC Plugged" if plugged else "Battery Discharging"
-                self.card_power.lbl_val.configure(text=f"{bat_pct:.0f}% ({state_str})")
-                self.card_power.bar.set(min(1.0, bat_pct / 100.0))
-            else:
-                fan_rpm = latest.get("fan_rpm", 0)
-                fan_text = f"{fan_rpm} RPM" if fan_rpm > 0 else "AC Main (0 RPM)"
-                self.card_power.lbl_val.configure(text=fan_text)
-                self.card_power.bar.set(0.75)
+        # 2. Define 5 Channels: (Label, Value, DisplayStr, Color)
+        # CPU Temp Color
+        if c_temp >= 80.0:
+            c_temp_col = "#ef4444"
+        elif c_temp >= 70.0:
+            c_temp_col = "#f97316"
+        elif c_temp >= 55.0:
+            c_temp_col = "#eab308"
+        else:
+            c_temp_col = "#00e5ff"
 
-        # 2. Scale & Guideline Coordinates
-        def scale_to_y(val, max_scale=100.0):
-            ratio = max(0.0, min(1.0, val / max_scale))
-            return h - 22 - (ratio * (h - 40))
+        # GPU Temp Color
+        if g_temp >= 75.0:
+            g_temp_col = "#ef4444"
+        elif g_temp >= 60.0:
+            g_temp_col = "#f97316"
+        else:
+            g_temp_col = "#10b981"
 
-        # Max scale based on metric
-        max_scale = 100.0
-        unit = "%"
-        if self.selected_metric == "cpu_temp":
-            unit = "°C"
-            max_scale = 100.0
+        # CPU Load Color
+        if c_load >= 70.0:
+            c_load_col = "#ef4444"
+        elif c_load >= 40.0:
+            c_load_col = "#eab308"
+        else:
+            c_load_col = "#10b981"
 
-        # Grid lines at 100%, 75%, 50%, 25%, 0%
-        for pct_val, is_alert in [(100, False), (75, True), (50, False), (25, False), (0, False)]:
-            y_pos = scale_to_y(pct_val, max_scale)
-            dash_pattern = (4, 4) if is_alert else (1, 4)
-            line_color = "#f97316" if is_alert else grid_col
-            canvas.create_line(42, y_pos, w - 15, y_pos, fill=line_color, dash=dash_pattern, width=1)
-            canvas.create_text(22, y_pos, text=f"{pct_val}{unit}", fill=line_color, font=("Segoe UI", 8))
+        # RAM Color
+        if r_pct >= 85.0:
+            ram_col = "#ef4444"
+        elif r_pct >= 70.0:
+            ram_col = "#a855f7"
+        else:
+            ram_col = "#00e5ff"
 
-        # Time Scale Axis
-        y_bottom = h - 14
-        canvas.create_line(42, y_bottom, w - 15, y_bottom, fill=grid_col, width=1)
-        canvas.create_text(48, y_bottom + 8, text="-60m", fill=ThemeManager.get("text_muted"), font=("Segoe UI", 8))
-        canvas.create_text((w + 30) // 2, y_bottom + 8, text="-30m", fill=ThemeManager.get("text_muted"), font=("Segoe UI", 8))
-        canvas.create_text(w - 25, y_bottom + 8, text="Now", fill=ThemeManager.get("text_muted"), font=("Segoe UI", 8, "bold"))
+        # Power/Bat Color
+        bat_str = f"{bat_pct:.0f}%" + (" (AC)" if power_plugged else " (Bat)")
+        bat_col = "#38bdf8" if power_plugged else ("#10b981" if bat_pct > 30 else "#ef4444")
 
-        if not samples:
-            canvas.create_text(w / 2, h / 2, text="Sampling real-time hardware telemetry bars...", fill=ThemeManager.get("text_muted"), font=("Segoe UI", 11))
-            return
+        channels = [
+            ("🔥 CPU Temp", c_temp, f"{c_temp:.1f}°C", c_temp_col),
+            ("🎮 GPU Temp", g_temp, f"{g_temp:.1f}°C", g_temp_col),
+            ("⚡ CPU Load", c_load, f"{c_load:.0f}%", c_load_col),
+            ("💾 RAM Used", r_pct, f"{r_pct:.0f}%", ram_col),
+            ("🔋 Power / Bat", bat_pct, bat_str, bat_col)
+        ]
 
-        # 3. Draw Vertical Bars
-        # Display last 35 to 45 samples as dense bars
-        n_bars = min(len(samples), 40)
-        recent_samples = samples[-n_bars:]
+        # 3. Draw Vertical Towers
+        start_x = 75
+        usable_w = (w - 30) - start_x
+        col_spacing = usable_w / len(channels)
+        bar_w = min(42, max(22, col_spacing * 0.45))
 
-        usable_w = w - 65
-        bar_width = max(6, (usable_w / max(1, n_bars)) - 3)
+        for idx, (lbl, val, val_str, col) in enumerate(channels):
+            center_x = start_x + (idx * col_spacing) + (col_spacing / 2)
+            x0 = center_x - (bar_w / 2)
+            x1 = center_x + (bar_w / 2)
+            y_val = val_to_y(val)
 
-        for idx, s in enumerate(recent_samples):
-            # Value extraction
-            val = 0.0
-            if self.selected_metric == "cpu_temp":
-                val = float(s.get("cpu_temp", 24.0))
-            elif self.selected_metric == "cpu_load":
-                val = float(s.get("cpu_load", 0.0))
-            elif self.selected_metric == "ram_pct":
-                val = float(s.get("ram_pct", 0.0))
-            elif self.selected_metric == "battery_pct":
-                val = float(s.get("battery_pct") or 100.0)
+            # Draw background slot track
+            canvas.create_rectangle(x0, y_top, x1, y_bottom, fill="#1e293b", outline=grid_col, width=1)
 
-            x0 = 46 + (idx * (bar_width + 3))
-            x1 = x0 + bar_width
-            y0 = scale_to_y(val, max_scale)
-            y1 = scale_to_y(0.0, max_scale)
+            # Draw dynamic filled level bar
+            if y_val < y_bottom:
+                canvas.create_rectangle(x0 + 1, y_val, x1 - 1, y_bottom - 1, fill=col, outline="", width=0)
+                # Highlight glow cap on top
+                canvas.create_line(x0, y_val, x1, y_val, fill="#ffffff", width=2)
 
-            # Intensity color gradient based on value
-            if self.selected_metric == "cpu_temp":
-                if val >= 80.0:
-                    bar_color = "#ef4444"  # Critical Red
-                elif val >= 68.0:
-                    bar_color = "#f97316"  # Warm Orange
-                elif val >= 55.0:
-                    bar_color = "#eab308"  # Moderate Yellow
-                else:
-                    bar_color = "#00e5ff"  # Optimal Cyan
-            else:
-                if val >= 85.0:
-                    bar_color = "#ef4444"
-                elif val >= 70.0:
-                    bar_color = "#f97316"
-                elif val >= 45.0:
-                    bar_color = "#eab308"
-                else:
-                    bar_color = "#10b981"
+            # Live changing value text right on top of bar
+            text_y = max(14, y_val - 10)
+            canvas.create_text(center_x, text_y, text=val_str, fill=col, font=("Segoe UI", 10, "bold"))
 
-            # Draw bar rectangle
-            canvas.create_rectangle(x0, y0, x1, y1, fill=bar_color, outline="", width=0)
-
-            # If newest bar, draw glow cap & text value
-            if idx == len(recent_samples) - 1:
-                canvas.create_rectangle(x0 - 1, y0 - 2, x1 + 1, y0 + 2, fill="#ffffff", outline=bar_color, width=1)
-                label_y = max(12, y0 - 10)
-                canvas.create_text((x0 + x1) / 2, label_y, text=f"{val:.0f}{unit}", fill=bar_color, font=("Segoe UI", 9, "bold"))
+            # Label text below bar
+            canvas.create_text(center_x, y_bottom + 16, text=lbl, fill=txt_pri, font=("Segoe UI", 9, "bold"))
 
     def refresh_log_table(self):
         """Refreshes the SQLite telemetry table."""
@@ -371,12 +289,10 @@ class HistoryView(ctk.CTkFrame):
             culprit = f"{r.get('top_culprit', '')} ({r.get('top_has', 0):.0f}%)"
             diag = r.get("diag_status", "OPTIMAL")
 
-            # Scientific Calibration: If CPU is cool (<72°C), it is nominal OPTIMAL
             raw_cpu_temp = float(r.get("cpu_temp") or 0.0)
             if raw_cpu_temp < 72.0 and "HEAVY" in diag:
                 diag = "OPTIMAL"
 
-            # Color mapping for scientific statuses
             if diag == "OPTIMAL":
                 diag_color = "#10b981"
             elif "HEAVY" in diag:
@@ -388,7 +304,15 @@ class HistoryView(ctk.CTkFrame):
             else:
                 diag_color = "#00e5ff"
 
-            vals = [(t_str, 135, ThemeManager.get("text_secondary")), (cpu_t, 85, ThemeManager.get("text_primary")), (cpu_l, 85, ThemeManager.get("text_secondary")), (gpu_t, 85, ThemeManager.get("text_secondary")), (fan_str, 95, ThemeManager.get("text_secondary")), (culprit, 140, ThemeManager.get("text_primary")), (diag, 110, diag_color)]
+            vals = [
+                (t_str, 135, ThemeManager.get("text_secondary")),
+                (cpu_t, 85, ThemeManager.get("text_primary")),
+                (cpu_l, 85, ThemeManager.get("text_secondary")),
+                (gpu_t, 85, ThemeManager.get("text_secondary")),
+                (fan_str, 95, ThemeManager.get("text_secondary")),
+                (culprit, 140, ThemeManager.get("text_primary")),
+                (diag, 110, diag_color)
+            ]
 
             for val, width, col in vals:
                 lbl = ctk.CTkLabel(row, text=val, font=ctk.CTkFont(size=11), text_color=col, width=width, anchor="w")
@@ -414,12 +338,11 @@ class HistoryView(ctk.CTkFrame):
         border = ThemeManager.get("border")
         txt_p = ThemeManager.get("text_primary")
 
-        self.canvas_card.configure(fg_color=bg_card, border_color=border)
+        self.meter_card.configure(fg_color=bg_card, border_color=border)
         self.log_table_frame.configure(fg_color=bg_card, border_color=border)
-        self.chart_title.configure(text_color=txt_p)
+        self.lbl_meter_title.configure(text_color=txt_p)
         self.log_title.configure(text_color=txt_p)
         self.btn_export_json.configure(fg_color=ThemeManager.get("bg_card_hover"), text_color=txt_p)
         self.btn_refresh_log.configure(fg_color=ThemeManager.get("bg_card_hover"), text_color=txt_p)
-        self._highlight_active_tab()
         self.update_chart(force=True)
         self.refresh_log_table()

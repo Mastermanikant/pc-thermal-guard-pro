@@ -1,4 +1,4 @@
-﻿"""
+"""
 Process Heat Attribution Engine (Real-Time Attribution HAS %)
 PC Thermal Guard Pro
 Master Manikant Yadav Ecosystem
@@ -40,7 +40,7 @@ PROCESS_DESCRIPTIONS = {
     'msmpeng.exe': 'Windows Defender Antivirus',
 }
 
-IGNORED_PROCESSES = {'system idle process', 'idle'}
+IGNORED_PROCESSES = {'system idle process', 'idle', 'pc_thermal_guard_pro.exe'}
 
 class HeatAttributionEngine:
     @classmethod
@@ -48,6 +48,7 @@ class HeatAttributionEngine:
         """Returns top heat-generating processes with normalized Heat Attribution Score (HAS %)."""
         process_candidates = []
         total_active_cpu = 0.0
+        own_pid = os.getpid()
 
         try:
             for proc in psutil.process_iter(['pid', 'name', 'cpu_percent', 'memory_info']):
@@ -56,7 +57,7 @@ class HeatAttributionEngine:
                     p_name = (info.get('name') or '').lower()
                     pid = info.get('pid', 0)
 
-                    if pid == 0 or p_name in IGNORED_PROCESSES:
+                    if pid == 0 or pid == own_pid or p_name in IGNORED_PROCESSES or 'pc_thermal_guard_pro' in p_name:
                         continue
 
                     cpu_pct = info.get('cpu_percent') or 0.0

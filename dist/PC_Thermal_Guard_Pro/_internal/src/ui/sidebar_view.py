@@ -35,14 +35,14 @@ class CollapsibleSidebar(ctk.CTkFrame):
         )
         self.sidebar_scroll.pack(fill="both", expand=True)
 
-        # 1. Navigation Buttons (Clean, focused 5 items)
+        # 1. Navigation Buttons (Clean, focused 4 distinct tabs)
         items = [
             ("Dashboard", "1. ⚡ Live Dashboard"),
             ("History", "2. 📈 Visual History"),
-            ("Cooling", "3. 🛡️ Smart Cooling"),
-            ("License", "4. 🔑 License & Beta"),
-            ("About", "5. 👨‍💻 Founder & Links"),
+            ("Cooling", "3. ⚙️ Settings & Cooling"),
+            ("License", "4. 🔑 License & Support"),
         ]
+
 
         for key, label in items:
             btn = ctk.CTkButton(

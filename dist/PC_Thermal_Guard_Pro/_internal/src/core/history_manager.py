@@ -1,4 +1,4 @@
-﻿"""
+"""
 Rolling Telemetry History & Diagnostic Ledger Engine
 PC Thermal Guard Pro
 Master Manikant Yadav Ecosystem
@@ -14,16 +14,55 @@ from src.core.logger import get_logger
 logger = get_logger("HistoryManager")
 
 class HistoryManager:
+    _instance = None
+
+    @classmethod
+    def get_instance(cls):
+        if cls._instance is None:
+            cls._instance = HistoryManager()
+        return cls._instance
+
     def __init__(self, db_path: Optional[str] = None):
         _appdata = os.environ.get("APPDATA") or os.path.expanduser("~")
         default_dir = os.path.join(_appdata, "FrankBase", "PCThermalGuardPro")
         os.makedirs(default_dir, exist_ok=True)
 
+        self.config_file = os.path.join(default_dir, "thermal_config.json")
         self.db_path = db_path or os.path.join(default_dir, "thermal_history.db")
         # Tier 1: In-memory 60-minute circular ring buffer (sampled 1Hz = 3600 samples)
         self.ring_buffer = collections.deque(maxlen=3600)
         self._last_disk_flush = time.time()
+        self.is_logging_enabled = True
+
+        self._load_config()
         self._init_sqlite_db()
+        HistoryManager._instance = self
+
+    def _load_config(self):
+        try:
+            if os.path.exists(self.config_file):
+                with open(self.config_file, "r", encoding="utf-8") as f:
+                    data = json.load(f)
+                    self.is_logging_enabled = bool(data.get("history_logging_enabled", True))
+        except Exception as e:
+            logger.warning(f"Could not load history config: {e}")
+
+    def save_config(self, enabled: bool):
+        self.is_logging_enabled = enabled
+        try:
+            data = {}
+            if os.path.exists(self.config_file):
+                try:
+                    with open(self.config_file, "r", encoding="utf-8") as f:
+                        data = json.load(f)
+                except Exception:
+                    data = {}
+            data["history_logging_enabled"] = enabled
+            with open(self.config_file, "w", encoding="utf-8") as f:
+                json.dump(data, f, indent=2)
+            logger.info(f"Saved history logging config: enabled={enabled}")
+        except Exception as e:
+            logger.error(f"Error saving history logging config: {e}")
 
     def _init_sqlite_db(self):
         try:
@@ -52,8 +91,12 @@ class HistoryManager:
         now = time.time()
         cpu_temp = telemetry.get("cpu_package_temp") or telemetry.get("cpu_temp", 24.0)
         cpu_load = telemetry.get("cpu_load", 0.0)
+        cpu_power = telemetry.get("cpu_power", 0.0)
+        ram_pct = telemetry.get("ram_pct", 0.0)
         gpu_temp = telemetry.get("gpu_temp", 22.0)
         fan_rpm = telemetry.get("fan_rpm", 0)
+        battery_pct = telemetry.get("battery_pct")
+        power_plugged = telemetry.get("power_plugged", True)
 
         top_name = culprits[0]["name"] if culprits else "System"
         top_has = culprits[0]["heat_score"] if culprits else 0.0
@@ -63,20 +106,25 @@ class HistoryManager:
             "time_str": time.strftime("%H:%M:%S", time.localtime(now)),
             "cpu_temp": cpu_temp,
             "cpu_load": cpu_load,
+            "cpu_power": cpu_power,
+            "ram_pct": ram_pct,
             "gpu_temp": gpu_temp,
             "fan_rpm": fan_rpm,
+            "battery_pct": battery_pct,
+            "power_plugged": power_plugged,
             "top_culprit": top_name,
             "top_has": top_has,
             "diag_status": diag_status
         }
 
-        # Tier 1: In-memory instant ring buffer append
+        # Tier 1: In-memory instant ring buffer append (always kept for live in-session graph)
         self.ring_buffer.append(sample)
 
-        # Tier 2: Flush to SQLite every 60 seconds (or on high overheat event)
-        if (now - self._last_disk_flush >= 60.0) or (cpu_temp >= 80.0 and now - self._last_disk_flush >= 10.0):
-            self._flush_to_db(sample)
-            self._last_disk_flush = now
+        # Tier 2: Flush to SQLite every 60 seconds (ONLY IF LOGGING IS ENABLED)
+        if self.is_logging_enabled:
+            if (now - self._last_disk_flush >= 60.0) or (cpu_temp >= 80.0 and now - self._last_disk_flush >= 10.0):
+                self._flush_to_db(sample)
+                self._last_disk_flush = now
 
     def add_telemetry_point(self, telemetry: Dict[str, Any], culprits: List[Dict[str, Any]], diag_status: str = "OPTIMAL"):
         """Alias for record_sample to ensure 100% backward compatibility."""
@@ -143,6 +191,20 @@ class HistoryManager:
     def get_db_history(self, limit: int = 50) -> List[Dict[str, Any]]:
         """Alias for HistoryView."""
         return self.get_historical_records(limit=limit)
+
+    def clear_all_history(self) -> bool:
+        """Clears all stored historical records from the SQLite database."""
+        try:
+            with sqlite3.connect(self.db_path) as conn:
+                conn.execute("DELETE FROM thermal_logs;")
+                conn.execute("VACUUM;")
+                conn.commit()
+            self.ring_buffer.clear()
+            logger.info("History database cleared.")
+            return True
+        except Exception as e:
+            logger.error(f"Error clearing history: {e}")
+            return False
 
     def export_report_json(self, file_path: str) -> bool:
         try:

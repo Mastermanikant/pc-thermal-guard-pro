@@ -66,12 +66,16 @@ class HardwareSensorEngine:
             'gpu_power': 5.0,
             'fan_rpm': 0,
             'fan_status': '0 RPM (Silent / Standby)',
+            'ram_used_gb': round(psutil.virtual_memory().used / (1024 ** 3), 1),
+            'ram_total_gb': round(psutil.virtual_memory().total / (1024 ** 3), 1),
+            'ram_pct': round(psutil.virtual_memory().percent, 0),
             'mobo_temp': 24.0,
             'is_throttling': False,
             'source': 'LibreHardwareMonitor (Ring-0)' if self.is_admin_mode else 'User Mode (Estimated)',
             'is_admin': self.is_admin_mode,
             'timestamp': time.time()
         }
+
 
         self._lock = threading.Lock()
         self._stop_event = threading.Event()
@@ -235,6 +239,16 @@ class HardwareSensorEngine:
         ram_total_gb = round(vmem.total / (1024 ** 3), 1)
         ram_pct = round(vmem.percent, 0)
 
+        battery_pct = None
+        power_plugged = True
+        try:
+            bat = psutil.sensors_battery()
+            if bat:
+                battery_pct = round(bat.percent, 0)
+                power_plugged = bool(bat.power_plugged)
+        except Exception:
+            pass
+
         return {
             'cpu_temp': round(cpu_temp, 1),
             'cpu_temp_max': round(cpu_temp_max or cpu_temp, 1),
@@ -250,6 +264,8 @@ class HardwareSensorEngine:
             'ram_used_gb': ram_used_gb,
             'ram_total_gb': ram_total_gb,
             'ram_pct': ram_pct,
+            'battery_pct': battery_pct,
+            'power_plugged': power_plugged,
             'mobo_temp': round(mobo_temp, 1),
             'is_throttling': is_throttling,
             'source': source,

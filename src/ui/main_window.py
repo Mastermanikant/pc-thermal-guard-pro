@@ -73,6 +73,7 @@ class MainWindow(ctk.CTk):
         self.after(500, self._process_telemetry_queue)
 
         # Intercept Close Event to Minimize to Tray
+        self._has_notified_tray_minimize = False
         self.protocol("WM_DELETE_WINDOW", self.minimize_to_tray)
         logger.info("MainWindow initialized and ready!")
 
@@ -337,10 +338,12 @@ class MainWindow(ctk.CTk):
             except Exception:
                 pass
 
-            self.tray_mgr.show_notification(
-                "FrankBase PC Thermal Guard Pro",
-                "Running in background tray mode (<20MB RAM). Double-click tray icon to open."
-            )
+            if not self._has_notified_tray_minimize:
+                self.tray_mgr.show_notification(
+                    "FrankBase PC Thermal Guard Pro",
+                    "Running in background tray mode (<20MB RAM). Double-click tray icon to open."
+                )
+                self._has_notified_tray_minimize = True
             logger.info("Minimized to System Tray & RAM Trimmed.")
         except Exception as e:
             logger.error(f"Error minimizing to tray: {e}")
