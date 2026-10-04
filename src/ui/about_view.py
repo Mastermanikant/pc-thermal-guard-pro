@@ -39,20 +39,124 @@ class AboutAndLicenseView(ctk.CTkScrollableFrame):
         )
         lbl_title.pack(anchor="w", padx=15, pady=(15, 8))
 
-        # ── Card 1: Unique PC Hardware ID (Device ID) ──
+        # ── Card 1 (RANK 1 / TOP PRIORITY): 30-Day Beta Trial & Pro Activation ──
+        card_license = ctk.CTkFrame(self, fg_color=FRAME_BG, corner_radius=10, border_width=1, border_color=BORDER_COLOR)
+        card_license.pack(fill="x", padx=15, pady=6)
+
+        lic_hdr = ctk.CTkFrame(card_license, fg_color="transparent")
+        lic_hdr.pack(fill="x", padx=18, pady=(14, 4))
+
+        lbl_lic_title = ctk.CTkLabel(
+            lic_hdr,
+            text="⭐ License Status & 1-Click 30-Day Beta Activation:",
+            font=ctk.CTkFont(size=14, weight="bold"),
+            text_color=TEXT_COLOR
+        )
+        lbl_lic_title.pack(side="left")
+
+        status_text = f"{self.license_mgr.get_license_tier_name()}"
+        self.lbl_tier = ctk.CTkLabel(
+            lic_hdr,
+            text=status_text,
+            font=ctk.CTkFont(size=11, weight="bold"),
+            fg_color="#003311" if self.license_mgr.is_pro_active() else "#3b2005",
+            text_color=NEON_GREEN if self.license_mgr.is_pro_active() else "#f59e0b",
+            corner_radius=6,
+            padx=8,
+            pady=3
+        )
+        self.lbl_tier.pack(side="right")
+
+        ctk.CTkLabel(
+            card_license,
+            text="Get started immediately with 100% free offline community beta access for 30 days, or activate your permanent Pro Lifetime Key:",
+            font=ctk.CTkFont(size=11),
+            text_color=DYNAMIC_GRAY,
+            justify="left",
+            wraplength=660
+        ).pack(anchor="w", padx=18, pady=(4, 10))
+
+        # 1-Click 30-Day Beta Key Generation Row
+        row_quick_beta = ctk.CTkFrame(card_license, fg_color=BG_COLOR, corner_radius=8, border_width=1, border_color=BORDER_COLOR)
+        row_quick_beta.pack(fill="x", padx=18, pady=(0, 10))
+
+        beta_inner = ctk.CTkFrame(row_quick_beta, fg_color="transparent")
+        beta_inner.pack(fill="x", padx=12, pady=10)
+
+        beta_text_box = ctk.CTkFrame(beta_inner, fg_color="transparent")
+        beta_text_box.pack(side="left", fill="both", expand=True)
+
+        ctk.CTkLabel(
+            beta_text_box,
+            text="🎁 30-Day Free Community Beta Trial Key",
+            font=ctk.CTkFont(size=12, weight="bold"),
+            text_color=NEON_CYAN,
+            anchor="w"
+        ).pack(fill="x")
+
+        ctk.CTkLabel(
+            beta_text_box,
+            text="Instantly generates a machine-bound beta trial key and unlocks full thermal protection on this PC.",
+            font=ctk.CTkFont(size=10),
+            text_color=DYNAMIC_GRAY,
+            anchor="w"
+        ).pack(fill="x", pady=(2, 0))
+
+        btn_auto_beta = ctk.CTkButton(
+            beta_inner,
+            text="⚡ 1-Click Activate 30-Day Beta",
+            font=ctk.CTkFont(size=11, weight="bold"),
+            fg_color=NEON_MAGENTA,
+            hover_color="#c00060",
+            text_color="white",
+            corner_radius=6,
+            height=34,
+            command=self._on_auto_activate_beta
+        )
+        btn_auto_beta.pack(side="right", padx=(10, 0))
+
+        # Manual Key Entry Row
+        row_lic = ctk.CTkFrame(card_license, fg_color="transparent")
+        row_lic.pack(fill="x", padx=18, pady=(4, 14))
+
+        self.entry_key = ctk.CTkEntry(
+            row_lic,
+            placeholder_text="Enter your Pro or Beta License Key (e.g. FB-PRO-XXXX-XXXX)",
+            height=36,
+            corner_radius=6,
+            fg_color=BG_COLOR,
+            border_color=BORDER_COLOR
+        )
+        self.entry_key.pack(side="left", fill="x", expand=True, padx=(0, 10))
+
+        btn_activate = ctk.CTkButton(
+            row_lic,
+            text="⚡ Activate Key",
+            width=130,
+            height=36,
+            corner_radius=6,
+            fg_color="#059669",
+            hover_color="#047857",
+            text_color="white",
+            font=ctk.CTkFont(size=12, weight="bold"),
+            command=self._on_activate_license
+        )
+        btn_activate.pack(side="right")
+
+        # ── Card 2 (RANK 2): Unique PC Hardware ID (Device ID) ──
         card_hwid = ctk.CTkFrame(self, fg_color=FRAME_BG, corner_radius=10, border_width=1, border_color=BORDER_COLOR)
         card_hwid.pack(fill="x", padx=15, pady=6)
 
         lbl_hwid_title = ctk.CTkLabel(
             card_hwid,
-            text="🖥️ Unique Device ID (Your PC Machine Number):",
+            text="🖥️ Unique Device Hardware ID (Machine Fingerprint):",
             font=ctk.CTkFont(size=13, weight="bold"),
             text_color=NEON_CYAN
         )
-        lbl_hwid_title.pack(anchor="w", padx=15, pady=(12, 4))
+        lbl_hwid_title.pack(anchor="w", padx=18, pady=(12, 4))
 
         row_hwid = ctk.CTkFrame(card_hwid, fg_color="transparent")
-        row_hwid.pack(fill="x", padx=15, pady=(2, 6))
+        row_hwid.pack(fill="x", padx=18, pady=(2, 6))
 
         self.lbl_hwid_val = ctk.CTkLabel(
             row_hwid,
@@ -66,7 +170,7 @@ class AboutAndLicenseView(ctk.CTkScrollableFrame):
             row_hwid,
             text="📋 Copy Device ID",
             width=130,
-            height=32,
+            height=30,
             corner_radius=6,
             fg_color=NEON_CYAN,
             hover_color="#00b0ff",
@@ -76,95 +180,53 @@ class AboutAndLicenseView(ctk.CTkScrollableFrame):
         )
         btn_copy_hwid.pack(side="left")
 
-        # ── Card 2: 50% Community Discount & 30-Day Beta Incentive ──
-        card_discount = ctk.CTkFrame(self, fg_color="#1a1c2e", corner_radius=10, border_width=1, border_color=NEON_CYAN)
+        ctk.CTkLabel(
+            card_hwid,
+            text="• 100% offline hardware identification locked to CPU & Motherboard. Never transmitted anywhere without your permission.",
+            font=ctk.CTkFont(size=10, slant="italic"),
+            text_color=DYNAMIC_GRAY
+        ).pack(anchor="w", padx=18, pady=(0, 10))
+
+        # ── Card 3 (RANK 3): Community Feedback & 50% Lifetime Pro Discount ──
+        card_discount = ctk.CTkFrame(self, fg_color=FRAME_BG, corner_radius=10, border_width=1, border_color=BORDER_COLOR)
         card_discount.pack(fill="x", padx=15, pady=6)
 
         ctk.CTkLabel(
             card_discount,
-            text="🎁 Get 50% OFF Pro Lifetime (Takes up to 2 mins max):",
-            font=ctk.CTkFont(size=14, weight="bold"),
-            text_color=NEON_CYAN
-        ).pack(anchor="w", padx=15, pady=(12, 4))
+            text="🎁 Community Feedback & 50% Lifetime Pro Discount:",
+            font=ctk.CTkFont(size=13, weight="bold"),
+            text_color=TEXT_COLOR
+        ).pack(anchor="w", padx=18, pady=(12, 4))
 
         disc_desc = (
-            "We value honest user feedback over fake ratings. Share 1-2 quick suggestions on our official portal "
-            "and instantly receive a 50% Discount Coupon for Pro Lifetime Edition!\n\n"
-            "• Early Beta Tester Base Discount: 30% Flat (Just for testing the app)\n"
-            "• Quick Feedback Discount: 50% Super Community Discount (Takes ≤2 mins)\n"
-            "⚠️ Note: The 50% discount coupon code is locked and valid strictly for this Device ID only."
+            "We value honest user feedback over fake ratings. Share 1-2 quick suggestions or feature requests on our official portal "
+            "and receive a 50% discount coupon locked to this PC's Device ID."
         )
         ctk.CTkLabel(
             card_discount,
             text=disc_desc,
             font=ctk.CTkFont(size=11),
-            text_color="#cbd5e1",
+            text_color=DYNAMIC_GRAY,
             justify="left",
             wraplength=660
-        ).pack(anchor="w", padx=15, pady=(0, 10))
+        ).pack(anchor="w", padx=18, pady=(0, 10))
 
         btn_claim_disc = ctk.CTkButton(
             card_discount,
-            text="🚀 Share Feedback & Claim 50% Discount Coupon ↗",
-            height=36,
-            corner_radius=8,
-            fg_color=NEON_MAGENTA,
-            hover_color="#c00060",
-            text_color="white",
-            font=ctk.CTkFont(size=12, weight="bold"),
-            command=self._open_discount_portal
-        )
-        btn_claim_disc.pack(padx=15, pady=(0, 14), fill="x")
-
-        # ── Card 3: 100% Offline License Key Activation ──
-        card_license = ctk.CTkFrame(self, fg_color=FRAME_BG, corner_radius=10, border_width=1, border_color=BORDER_COLOR)
-        card_license.pack(fill="x", padx=15, pady=6)
-
-        lbl_lic_title = ctk.CTkLabel(
-            card_license,
-            text="⭐ License Status & Offline Pro Activation:",
-            font=ctk.CTkFont(size=13, weight="bold"),
-            text_color=TEXT_COLOR
-        )
-        lbl_lic_title.pack(anchor="w", padx=15, pady=(12, 4))
-
-        status_text = f"Current Status: {self.license_mgr.get_license_tier_name()}"
-        self.lbl_tier = ctk.CTkLabel(
-            card_license,
-            text=status_text,
-            font=ctk.CTkFont(size=12, weight="bold"),
-            text_color=NEON_GREEN if self.license_mgr.is_pro_active() else "#f59e0b"
-        )
-        self.lbl_tier.pack(anchor="w", padx=15, pady=2)
-
-        row_lic = ctk.CTkFrame(card_license, fg_color="transparent")
-        row_lic.pack(fill="x", padx=15, pady=(8, 14))
-
-        self.entry_key = ctk.CTkEntry(
-            row_lic,
-            placeholder_text="Enter your Pro License Key (e.g. FB-PRO-XXXX-XXXX)",
-            height=36,
+            text="🌐 Share 2-Min Feedback & Claim Discount ↗",
+            height=32,
             corner_radius=6,
             fg_color=BG_COLOR,
-            border_color=BORDER_COLOR
+            border_width=1,
+            border_color=BORDER_COLOR,
+            hover_color="#003344",
+            text_color=NEON_CYAN,
+            font=ctk.CTkFont(size=11, weight="bold"),
+            command=self._open_discount_portal
         )
-        self.entry_key.pack(side="left", fill="x", expand=True, padx=(0, 10))
+        btn_claim_disc.pack(padx=18, pady=(0, 12), fill="x")
 
-        btn_activate = ctk.CTkButton(
-            row_lic,
-            text="⚡ Activate Pro",
-            width=130,
-            height=36,
-            corner_radius=6,
-            fg_color="#059669",
-            hover_color="#047857",
-            text_color="white",
-            font=ctk.CTkFont(size=12, weight="bold"),
-            command=self._on_activate_license
-        )
-        btn_activate.pack(side="right")
-
-        # ── Card 4: Diagnostics Logs & Developer Support ──
+        # ── Card 4 (RANK 4): Diagnostics Logs & Developer Support ──
         card_logs = ctk.CTkFrame(self, fg_color=FRAME_BG, corner_radius=10, border_width=1, border_color=BORDER_COLOR)
         card_logs.pack(fill="x", padx=15, pady=6)
 
@@ -173,7 +235,7 @@ class AboutAndLicenseView(ctk.CTkScrollableFrame):
             text="🛠️ Diagnostic Logs & Developer Support:",
             font=ctk.CTkFont(size=13, weight="bold"),
             text_color=TEXT_COLOR
-        ).pack(anchor="w", padx=15, pady=(12, 4))
+        ).pack(anchor="w", padx=18, pady=(12, 4))
 
         ctk.CTkLabel(
             card_logs,
@@ -182,10 +244,10 @@ class AboutAndLicenseView(ctk.CTkScrollableFrame):
             text_color=DYNAMIC_GRAY,
             wraplength=660,
             justify="left"
-        ).pack(anchor="w", padx=15, pady=(0, 10))
+        ).pack(anchor="w", padx=18, pady=(0, 10))
 
         row_log_btns = ctk.CTkFrame(card_logs, fg_color="transparent")
-        row_log_btns.pack(fill="x", padx=15, pady=(0, 14))
+        row_log_btns.pack(fill="x", padx=18, pady=(0, 14))
 
         btn_open_logs = ctk.CTkButton(
             row_log_btns,
@@ -217,7 +279,7 @@ class AboutAndLicenseView(ctk.CTkScrollableFrame):
         )
         btn_copy_debug.pack(side="left")
 
-        # ── Card 5: Founder Credibility & Official Links ──
+        # ── Card 5 (RANK 5): Founder Credibility & Official Links ──
         card_founder = ctk.CTkFrame(self, fg_color=FRAME_BG, corner_radius=10, border_width=1, border_color=BORDER_COLOR)
         card_founder.pack(fill="x", padx=15, pady=(6, 20))
 
@@ -227,7 +289,7 @@ class AboutAndLicenseView(ctk.CTkScrollableFrame):
             font=ctk.CTkFont(size=13, weight="bold"),
             text_color=TEXT_COLOR
         )
-        lbl_dev_head.pack(anchor="w", padx=15, pady=(12, 2))
+        lbl_dev_head.pack(anchor="w", padx=18, pady=(12, 2))
 
         lbl_founder_name = ctk.CTkLabel(
             card_founder,
@@ -235,7 +297,7 @@ class AboutAndLicenseView(ctk.CTkScrollableFrame):
             font=ctk.CTkFont(size=15, weight="bold"),
             text_color=NEON_CYAN
         )
-        lbl_founder_name.pack(anchor="w", padx=15, pady=1)
+        lbl_founder_name.pack(anchor="w", padx=18, pady=1)
 
         lbl_desk = ctk.CTkLabel(
             card_founder,
@@ -243,11 +305,10 @@ class AboutAndLicenseView(ctk.CTkScrollableFrame):
             font=ctk.CTkFont(size=11),
             text_color=DYNAMIC_GRAY
         )
-        lbl_desk.pack(anchor="w", padx=15, pady=(1, 8))
+        lbl_desk.pack(anchor="w", padx=18, pady=(1, 8))
 
-        # Only 2 clean official links
         row_links = ctk.CTkFrame(card_founder, fg_color="transparent")
-        row_links.pack(fill="x", padx=15, pady=(2, 14))
+        row_links.pack(fill="x", padx=18, pady=(2, 14))
 
         ctk.CTkButton(
             row_links,
@@ -277,6 +338,24 @@ class AboutAndLicenseView(ctk.CTkScrollableFrame):
             command=lambda: webbrowser.open("https://store.frankbase.com")
         ).pack(side="left", expand=True, fill="x", padx=(4, 0))
 
+    def _on_auto_activate_beta(self):
+        """Generates machine-bound beta key, pre-fills entry, and activates with 1-click."""
+        beta_key = self.license_mgr.generate_beta_trial_key()
+        self.entry_key.delete(0, "end")
+        self.entry_key.insert(0, beta_key)
+        success, msg = self.license_mgr.activate_license(beta_key)
+        if success:
+            self.lbl_tier.configure(
+                text=f"{self.license_mgr.get_license_tier_name()}",
+                text_color=NEON_GREEN,
+                fg_color="#003311"
+            )
+            if self.toast:
+                self.toast("🎉 30-Day Free Beta Activated Successfully!")
+        else:
+            if self.toast:
+                self.toast(f"⚠️ {msg}")
+
     def _on_copy_hwid(self):
         copy_machine_id_to_clipboard()
         if self.toast:
@@ -296,11 +375,12 @@ class AboutAndLicenseView(ctk.CTkScrollableFrame):
         success, msg = self.license_mgr.activate_license(key)
         if success:
             self.lbl_tier.configure(
-                text=f"Current Status: {self.license_mgr.get_license_tier_name()}",
-                text_color=NEON_GREEN
+                text=f"{self.license_mgr.get_license_tier_name()}",
+                text_color=NEON_GREEN,
+                fg_color="#003311"
             )
             if self.toast:
-                self.toast("🎉 Pro Lifetime Edition Activated Successfully!")
+                self.toast("🎉 License Activated Successfully!")
         else:
             if self.toast:
                 self.toast(f"❌ {msg}")

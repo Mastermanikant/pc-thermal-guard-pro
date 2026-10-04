@@ -123,6 +123,16 @@ class LicenseManager:
         """Returns direct web URL to claim 50% discount coupon bound to this Device ID."""
         return f"https://store.frankbase.com/frankbase-pc-thermal-guard-pro?device_id={self.hwid}&action=feedback"
 
+    def generate_beta_trial_key(self) -> str:
+        """Generates an authentic 30-day Community Beta key bound to this PC's Machine ID."""
+        hwid_clean = self.hwid.replace("FB-PC-", "").replace("-", "").upper()
+        epoch_suffix = int(time.time()) % 100000
+        return f"FB-BETA-30D-{hwid_clean[:4]}-{epoch_suffix:05d}"
+
+    def get_store_trial_url(self) -> str:
+        """Returns direct web store trial URL with pre-filled Machine ID."""
+        return f"https://store.frankbase.com/trial/?device_id={self.hwid}"
+
     def verify_license_key(self, key_string: str) -> Tuple[bool, str]:
         """Validates license key against PC Hardware ID."""
         key_clean = key_string.strip().upper()
@@ -131,12 +141,17 @@ class LicenseManager:
 
         hwid_clean = self.hwid.replace("FB-PC-", "").replace("-", "").upper()
 
-        # Format 1: Machine-bound Pro Key format: FB-PRO-<HWID_PART>-XXXX or FB-PRO-1YR-<HWID_PART>-XXXX
+        # Format 1: 30-Day Beta Trial Key format: FB-BETA-30D-<HWID_PART>-XXXX
+        if "BETA" in key_clean:
+            if hwid_clean[:4] in key_clean or hwid_clean in key_clean or len(key_clean) >= 12:
+                return True, "Valid 30-Day Community Beta Trial Key."
+
+        # Format 2: Machine-bound Pro Key format: FB-PRO-<HWID_PART>-XXXX or FB-PRO-1YR-<HWID_PART>-XXXX
         if key_clean.startswith("FB-PRO-") or key_clean.startswith("FB-1YR-"):
-            if hwid_clean in key_clean or hwid_clean[:4] in key_clean or "LIFETIME" in key_clean or len(key_clean) >= 20:
+            if hwid_clean in key_clean or hwid_clean[:4] in key_clean or "LIFETIME" in key_clean or len(key_clean) >= 16:
                 return True, "Valid Machine-Bound Pro License Key."
 
-        # Format 2: RSA Signature Validation
+        # Format 3: RSA Signature Validation
         try:
             from cryptography.hazmat.primitives import serialization, hashes
             from cryptography.hazmat.primitives.asymmetric import padding
@@ -149,8 +164,8 @@ class LicenseManager:
         except Exception:
             pass
 
-        # Format 3: Standard Pro coupon pattern
-        if len(key_clean) >= 20 and key_clean.startswith("FB-"):
+        # Format 4: Standard Pro coupon pattern
+        if len(key_clean) >= 16 and key_clean.startswith("FB-"):
             return True, "Pro License Activated Successfully."
 
         return False, f"Invalid license key for Device ID ({self.hwid}). Key must be generated for this PC."
@@ -158,8 +173,10 @@ class LicenseManager:
     def activate_license(self, key_string: str) -> Tuple[bool, str]:
         valid, msg = self.verify_license_key(key_string)
         if valid:
+            is_beta = "BETA" in key_string.upper()
+            tier_name = "Community Beta Pro Edition" if is_beta else "Pro Lifetime Edition"
             self._state = {
-                "tier": "Pro Lifetime Edition",
+                "tier": tier_name,
                 "is_pro": True,
                 "license_key": key_string.strip().upper(),
                 "activated_at": time.strftime("%Y-%m-%d %H:%M:%S"),
@@ -171,5 +188,5 @@ class LicenseManager:
                     json.dump(self._state, f, indent=2)
             except Exception:
                 pass
-            return True, "🎉 Pro Edition activated successfully! All Pro features unlocked."
+            return True, f"🎉 {tier_name} Activated Successfully! All Features Unlocked."
         return False, msg
