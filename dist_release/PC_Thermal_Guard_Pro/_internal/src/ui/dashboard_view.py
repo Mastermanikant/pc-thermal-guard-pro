@@ -258,13 +258,13 @@ class DashboardView(ctk.CTkScrollableFrame):
 
     def _create_culprit_row(self, parent, index):
         frame = ctk.CTkFrame(parent, fg_color=BG_COLOR if index % 2 == 0 else "transparent", corner_radius=6)
-        frame.pack(fill="x", pady=2)
+        frame.pack(fill="x", pady=3)
 
-        lbl_rank = ctk.CTkLabel(frame, text=f"#{index+1}", width=28, font=ctk.CTkFont(weight="bold", size=11), text_color=DYNAMIC_GRAY)
-        lbl_rank.pack(side="left", padx=(8, 2))
+        lbl_rank = ctk.CTkLabel(frame, text=f"#{index+1}", width=30, font=ctk.CTkFont(weight="bold", size=11), text_color=DYNAMIC_GRAY)
+        lbl_rank.pack(side="left", padx=(10, 2))
 
-        info_box = ctk.CTkFrame(frame, fg_color="transparent", width=160)
-        info_box.pack(side="left", padx=4)
+        info_box = ctk.CTkFrame(frame, fg_color="transparent", width=220)
+        info_box.pack(side="left", padx=6)
         info_box.pack_propagate(False)
 
         lbl_name = ctk.CTkLabel(info_box, text="System Process", font=ctk.CTkFont(weight="bold", size=12), text_color=TEXT_COLOR, anchor="w")
@@ -272,28 +272,12 @@ class DashboardView(ctk.CTkScrollableFrame):
         lbl_desc = ctk.CTkLabel(info_box, text="Idle", font=ctk.CTkFont(size=10), text_color=DYNAMIC_GRAY, anchor="w")
         lbl_desc.pack(fill="x")
 
-        lbl_stats = ctk.CTkLabel(frame, text="CPU: 0.0% | 0 MB", width=120, font=ctk.CTkFont(size=11), text_color=TEXT_COLOR)
-        lbl_stats.pack(side="left", padx=4)
+        lbl_stats = ctk.CTkLabel(frame, text="CPU: 0.0% | 0 MB", width=140, font=ctk.CTkFont(size=11), text_color=TEXT_COLOR)
+        lbl_stats.pack(side="left", padx=8)
 
         prog = ctk.CTkProgressBar(frame, height=8, corner_radius=4, fg_color="#333333", progress_color=NEON_GREEN)
-        prog.pack(side="left", fill="x", expand=True, padx=6)
+        prog.pack(side="left", fill="x", expand=True, padx=(8, 14))
         prog.set(0.02)
-
-        btn_slow = ctk.CTkButton(
-            frame,
-            text="Slow Down",
-            width=70,
-            height=26,
-            corner_radius=5,
-            fg_color="transparent",
-            border_width=1,
-            border_color=BORDER_COLOR,
-            text_color=TEXT_COLOR,
-            hover_color=NEON_CYAN,
-            font=ctk.CTkFont(size=10, weight="bold"),
-            command=lambda idx=index: self._on_slow_down_process(idx)
-        )
-        btn_slow.pack(side="right", padx=(4, 8))
 
         return {
             "frame": frame,
@@ -302,9 +286,9 @@ class DashboardView(ctk.CTkScrollableFrame):
             "desc": lbl_desc,
             "stats": lbl_stats,
             "progress": prog,
-            "btn_slow": btn_slow,
             "pid": None
         }
+
 
     def _create_mini_impact_box(self, parent, col, title, value, sub, color):
         box = ctk.CTkFrame(parent, fg_color=BG_COLOR, corner_radius=6, border_width=1, border_color=BORDER_COLOR)

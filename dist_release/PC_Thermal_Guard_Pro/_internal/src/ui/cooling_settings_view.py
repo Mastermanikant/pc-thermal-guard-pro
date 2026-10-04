@@ -177,67 +177,9 @@ class CoolingSettingsView(ctk.CTkScrollableFrame):
         )
         self.btn_launchpad.pack(fill="x", padx=18, pady=(0, 14))
 
-        # <!-- ================= Section: Intelligent Auto-Thermostat & Manual Presets ================= -->
-        mode_card = ctk.CTkFrame(self, fg_color=FRAME_BG, corner_radius=10, border_width=1, border_color=BORDER_COLOR)
-        mode_card.pack(fill="x", padx=15, pady=8)
-
-        mode_hdr = ctk.CTkFrame(mode_card, fg_color="transparent")
-        mode_hdr.pack(fill="x", padx=18, pady=(14, 4))
-
-        ctk.CTkLabel(
-            mode_hdr,
-            text="🤖 Intelligent Auto-Thermostat & Relief Intensity:",
-            font=ctk.CTkFont(size=13, weight="bold"),
-            text_color=TEXT_COLOR
-        ).pack(side="left")
-
-        ctk.CTkLabel(
-            mode_hdr,
-            text="50°C - 55°C Sweet Spot",
-            font=ctk.CTkFont(size=10, weight="bold"),
-            fg_color="#003311",
-            text_color=NEON_GREEN,
-            corner_radius=4,
-            padx=6,
-            pady=2
-        ).pack(side="right")
-
-        ctk.CTkLabel(
-            mode_card,
-            text="Built-in intelligent thermostat maintains silicon within 50°C-55°C optimal silent range automatically. Choose preferred default relief depth:",
-            font=ctk.CTkFont(size=11),
-            text_color=DYNAMIC_GRAY,
-            justify="left"
-        ).pack(anchor="w", padx=18, pady=(2, 10))
-
-        self.mode_var = ctk.StringVar(value="⚡ Balanced (Recommended)")
-        self.seg_mode = ctk.CTkSegmentedButton(
-            mode_card,
-            values=["🌱 Soft", "⚡ Balanced (Recommended)", "❄️ Deep"],
-            variable=self.mode_var,
-            height=34,
-            corner_radius=6,
-            fg_color=BG_COLOR,
-            selected_color=NEON_CYAN,
-            selected_hover_color=NEON_CYAN,
-            unselected_color=FRAME_BG,
-            unselected_hover_color=BORDER_COLOR,
-            font=ctk.CTkFont(size=11, weight="bold"),
-            command=self._on_mode_preset_changed
-        )
-        self.seg_mode.pack(fill="x", padx=18, pady=(0, 8))
-
-        self.lbl_mode_hint = ctk.CTkLabel(
-            mode_card,
-            text="💡 Balanced Mode: Throttles top background spikes while keeping active foreground window 100% fast.",
-            font=ctk.CTkFont(size=10, slant="italic"),
-            text_color=NEON_GREEN
-        )
-        self.lbl_mode_hint.pack(anchor="w", padx=18, pady=(0, 14))
-
         # <!-- ================= Section: Telemetry History Logging Toggle ================= -->
         log_card = ctk.CTkFrame(self, fg_color=FRAME_BG, corner_radius=10, border_width=1, border_color=BORDER_COLOR)
-        log_card.pack(fill="x", padx=15, pady=8)
+        log_card.pack(fill="x", padx=15, pady=(8, 20))
 
         log_hdr = ctk.CTkFrame(log_card, fg_color="transparent")
         log_hdr.pack(fill="x", padx=18, pady=(14, 4))
@@ -285,42 +227,6 @@ class CoolingSettingsView(ctk.CTkScrollableFrame):
         )
         btn_clear_history.pack(anchor="w", padx=18, pady=(0, 14))
 
-        # <!-- ================= Section: 3-Tier Thermal Safety Pillars ================= -->
-        guard_card = ctk.CTkFrame(self, fg_color=FRAME_BG, corner_radius=10, border_width=1, border_color=BORDER_COLOR)
-        guard_card.pack(fill="x", padx=15, pady=(8, 20))
-
-        guard_hdr = ctk.CTkFrame(guard_card, fg_color="transparent")
-        guard_hdr.pack(fill="x", padx=18, pady=(14, 4))
-
-        ctk.CTkLabel(
-            guard_hdr,
-            text="🔒 3-Tier Thermal Safety & Memory Protection Pillars",
-            font=ctk.CTkFont(size=13, weight="bold"),
-            text_color=NEON_CYAN
-        ).pack(side="left")
-
-        ctk.CTkLabel(
-            guard_hdr,
-            text="🛡️ 100% ENFORCED",
-            font=ctk.CTkFont(size=10, weight="bold"),
-            fg_color="#003311",
-            text_color=NEON_GREEN,
-            corner_radius=4,
-            padx=6,
-            pady=2
-        ).pack(side="right")
-
-        pillars = [
-            ("1. Active Window Immunity", "The app currently focused by the user is never throttled, guaranteeing zero disruption during gaming or typing."),
-            ("2. Windows Working-Set Memory Flush", "Reclaims stale RAM pages via psapi.EmptyWorkingSet, reducing memory bus heat and unneeded load."),
-            ("3. Kernel & System Process Protection", "Core Windows system processes (PID <= 4, csrss.exe, dwm.exe) are strictly protected from modification.")
-        ]
-
-        for title, desc in pillars:
-            p_box = ctk.CTkFrame(guard_card, fg_color=BG_COLOR, corner_radius=6)
-            p_box.pack(fill="x", padx=18, pady=4)
-            ctk.CTkLabel(p_box, text=f"✅ {title}", font=ctk.CTkFont(size=11, weight="bold"), text_color=TEXT_COLOR).pack(anchor="w", padx=12, pady=(6, 1))
-            ctk.CTkLabel(p_box, text=desc, font=ctk.CTkFont(size=10), text_color=DYNAMIC_GRAY).pack(anchor="w", padx=12, pady=(0, 6))
 
     def _on_autostart_toggled(self):
         is_on = self.sw_startup_var.get() == "ON"
@@ -337,16 +243,6 @@ class CoolingSettingsView(ctk.CTkScrollableFrame):
         if self.toast:
             self.toast(res["message"])
 
-    def _on_mode_preset_changed(self, val: str):
-        if "Soft" in val:
-            hint = "💡 Soft Mode: Cleans background RAM and calms idle updaters. Zero impact on multitasking."
-        elif "Deep" in val:
-            hint = "💡 Deep Mode: Emergency thermal relief. Calms all background tasks for maximum temperature drop."
-        else:
-            hint = "💡 Balanced Mode: Throttles top background spikes while keeping active foreground window 100% fast."
-        self.lbl_mode_hint.configure(text=hint)
-        if self.toast:
-            self.toast(f"❄️ Default Cooling Mode set to: {val}")
 
     def _on_logging_toggled(self):
         is_on = self.sw_log_var.get() == "ON"
