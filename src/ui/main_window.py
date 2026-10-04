@@ -106,10 +106,14 @@ class MainWindow(ctk.CTk):
         # Instantiate Clean Views
         self.view_dashboard = DashboardView(
             self.content_container,
-            on_toast=lambda title, msg: self.show_toast(f"⚡ {title}: {msg}"),
+            on_toast=lambda title, msg: self.show_toast(msg, title=title),
             on_cool_down_callback=self._on_master_cool_down_trigger
         )
-        self.view_history = HistoryView(self.content_container, self.history_mgr)
+        self.view_history = HistoryView(
+            self.content_container,
+            self.history_mgr,
+            on_toast=lambda title, msg: self.show_toast(msg, title=title)
+        )
         self.view_cooling = CoolingSettingsView(
             self.content_container,
             on_toast=self.show_toast
@@ -158,7 +162,7 @@ class MainWindow(ctk.CTk):
         if hasattr(self.view_cooling, "refresh_theme"):
             self.view_cooling.refresh_theme()
 
-        self.show_toast(f"🎨 Switched to {'Night Mode 🌙' if is_dark else 'Day Mode ☀️'}")
+        self.show_toast(f"Switched to {'Night Mode' if is_dark else 'Day Mode'}", title="Theme Updated")
 
     def _on_master_cool_down_trigger(self):
         """Executes 1-Click Cool Down & RAM Purge."""
@@ -168,41 +172,100 @@ class MainWindow(ctk.CTk):
             result = ThermalReliefEngine.one_click_cool_down(culprits)
             msg = result.get("message", "Cool Down & RAM Purge Triggered")
             logger.info(f"Cool Down result: {msg}")
-            self.show_toast(msg)
+            self.show_toast(msg, title="Cool Down & RAM Purge")
         except Exception as e:
             logger.exception(f"Error during Cool Down: {e}")
-            self.show_toast(f"⚠️ Error executing Cool Down: {e}")
+            self.show_toast(f"Error executing Cool Down: {e}", title="Cool Down Warning")
 
-    def show_toast(self, message: str, duration_sec: float = 3.5):
-        """Non-blocking floating toast notification."""
+    def show_toast(self, message: str, title: str = None, duration_sec: float = 4.5):
+        """Non-blocking floating rectangular card notification in middle-top with auto-hide."""
         try:
+            # Safely dismiss any previous active toast
+            if hasattr(self, "_active_toast") and self._active_toast:
+                try:
+                    if self._active_toast.winfo_exists():
+                        self._active_toast.destroy()
+                except Exception:
+                    pass
+                self._active_toast = None
+
+            is_dark = ThemeManager.get_current_theme() == "dark"
+            bg_card = "#0f172a" if is_dark else "#ffffff"
+            border_c = "#00e5ff" if is_dark else "#0284c7"
+            title_c = "#00e5ff" if is_dark else "#0369a1"
+            text_c = "#f1f5f9" if is_dark else "#0f172a"
+
             toast = ctk.CTkFrame(
                 self,
-                fg_color="#003344",
-                corner_radius=8,
-                border_width=1,
-                border_color=NEON_CYAN
+                fg_color=bg_card,
+                corner_radius=12,
+                border_width=1.5,
+                border_color=border_c
             )
-            lbl = ctk.CTkLabel(
-                toast,
-                text=message,
-                font=ctk.CTkFont(size=12, weight="bold"),
-                text_color="#ffffff"
-            )
-            lbl.pack(padx=16, pady=8)
-            toast.place(relx=0.5, rely=0.08, anchor="center")
+            self._active_toast = toast
 
-            def _remove():
+            inner = ctk.CTkFrame(toast, fg_color="transparent")
+            inner.pack(fill="both", expand=True, padx=14, pady=10)
+
+            top_row = ctk.CTkFrame(inner, fg_color="transparent")
+            top_row.pack(fill="x", pady=(0, 3))
+
+            header_text = title if title else "PC Thermal Guard Notification"
+            lbl_title = ctk.CTkLabel(
+                top_row,
+                text=header_text,
+                font=ctk.CTkFont(size=12, weight="bold"),
+                text_color=title_c
+            )
+            lbl_title.pack(side="left")
+
+            btn_close = ctk.CTkButton(
+                top_row,
+                text="✕",
+                width=20,
+                height=20,
+                corner_radius=10,
+                fg_color="transparent",
+                hover_color="#334155" if is_dark else "#e2e8f0",
+                text_color="#94a3b8",
+                font=ctk.CTkFont(size=10, weight="bold"),
+                command=lambda: self._destroy_toast(toast)
+            )
+            btn_close.pack(side="right")
+
+            lbl_msg = ctk.CTkLabel(
+                inner,
+                text=message,
+                font=ctk.CTkFont(size=11, weight="normal"),
+                text_color=text_c,
+                wraplength=460,
+                justify="left"
+            )
+            lbl_msg.pack(anchor="w", pady=(2, 0))
+
+            # Floating rectangular card placed in upper middle
+            toast.place(relx=0.5, rely=0.20, anchor="center")
+
+            def _auto_hide():
                 time.sleep(duration_sec)
                 try:
-                    if toast.winfo_exists():
-                        toast.destroy()
+                    if self.winfo_exists() and toast.winfo_exists():
+                        self.after(0, lambda: self._destroy_toast(toast))
                 except Exception:
                     pass
 
-            threading.Thread(target=_remove, daemon=True).start()
+            threading.Thread(target=_auto_hide, daemon=True).start()
         except Exception as e:
             logger.error(f"Error showing toast: {e}")
+
+    def _destroy_toast(self, toast_frame):
+        try:
+            if toast_frame and toast_frame.winfo_exists():
+                toast_frame.destroy()
+            if hasattr(self, "_active_toast") and self._active_toast == toast_frame:
+                self._active_toast = None
+        except Exception:
+            pass
 
     def _start_system_tray(self):
         try:
