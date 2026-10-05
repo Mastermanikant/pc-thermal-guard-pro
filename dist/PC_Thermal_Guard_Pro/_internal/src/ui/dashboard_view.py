@@ -9,6 +9,7 @@ from typing import Dict, Any, List, Callable
 from src.ui.theme import ThemeManager, NEON_CYAN, NEON_MAGENTA, NEON_GREEN, BG_COLOR, FRAME_BG, BORDER_COLOR, TEXT_COLOR, DYNAMIC_GRAY
 from src.core.thermal_relief import ThermalReliefEngine, purge_all_background_ram
 from src.core.hardware_sensor import restart_as_admin, is_admin
+from src.ui.ecosystem_card import EcosystemBannerCard
 
 class DashboardView(ctk.CTkScrollableFrame):
     def __init__(self, master, on_toast: Callable[[str, str], None] = None, on_cool_down_callback: Callable[[], None] = None, **kwargs):

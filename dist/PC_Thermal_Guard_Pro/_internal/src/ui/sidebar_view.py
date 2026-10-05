@@ -26,6 +26,36 @@ class CollapsibleSidebar(ctk.CTkFrame):
         self._build_ui()
 
     def _build_ui(self):
+        # 1. Fixed Bottom Founder & Credibility Card (Always at bottom of sidebar)
+        self.bottom_controls = ctk.CTkFrame(self, fg_color=FRAME_BG, corner_radius=10, border_width=1, border_color=BORDER_COLOR)
+        self.bottom_controls.pack(side="bottom", fill="x", padx=10, pady=(6, 12))
+
+        ctk.CTkLabel(self.bottom_controls, text="Designed & Developed By:", font=ctk.CTkFont(size=10), text_color=DYNAMIC_GRAY).pack(pady=(6, 0))
+        ctk.CTkLabel(self.bottom_controls, text="Master Manikant Yadav", font=ctk.CTkFont(size=12, weight="bold"), text_color=TEXT_COLOR).pack(pady=(1, 3))
+
+        ctk.CTkButton(
+            self.bottom_controls,
+            text="🌐 MasterManikant.com",
+            height=26,
+            fg_color="transparent",
+            border_width=1,
+            border_color=NEON_CYAN,
+            text_color=NEON_CYAN,
+            hover_color="#003344",
+            corner_radius=6,
+            font=ctk.CTkFont(size=10, weight="bold"),
+            cursor="hand2",
+            command=lambda: webbrowser.open("https://mastermanikant.com")
+        ).pack(pady=(2, 4), padx=10, fill="x")
+
+        privacy_text = "100% Local & Privacy-First Architecture"
+        ctk.CTkLabel(self.bottom_controls, text=privacy_text, font=ctk.CTkFont(size=8, slant="italic"), text_color=DYNAMIC_GRAY).pack(pady=(0, 2))
+
+        legal_lbl = ctk.CTkLabel(self.bottom_controls, text="📜 Legal Terms & Privacy Policy", font=ctk.CTkFont(size=9, underline=True), text_color=DYNAMIC_GRAY, cursor="hand2")
+        legal_lbl.pack(pady=(0, 6))
+        legal_lbl.bind("<Button-1>", lambda e: self._show_legal_modal())
+
+        # 2. Scrollable Navigation Area (Takes all remaining vertical space)
         self.sidebar_scroll = ctk.CTkScrollableFrame(
             self,
             fg_color=SIDEBAR_BG,
@@ -33,16 +63,15 @@ class CollapsibleSidebar(ctk.CTkFrame):
             scrollbar_button_color=("#cccccc", "#333333"),
             scrollbar_button_hover_color=NEON_CYAN
         )
-        self.sidebar_scroll.pack(fill="both", expand=True)
+        self.sidebar_scroll.pack(side="top", fill="both", expand=True)
 
-        # 1. Navigation Buttons (Clean, focused 4 distinct tabs)
+        # Navigation Buttons (Clean, focused 4 distinct tabs)
         items = [
             ("Dashboard", "1. ⚡ Live Dashboard"),
             ("History", "2. 📈 Visual History"),
             ("Cooling", "3. ⚙️ Settings & Cooling"),
             ("License", "4. 🔑 License & Support"),
         ]
-
 
         for key, label in items:
             btn = ctk.CTkButton(
@@ -63,7 +92,7 @@ class CollapsibleSidebar(ctk.CTkFrame):
 
         self._highlight_active_nav()
 
-        # 2. Thermal Protection Status Pill Card
+        # Thermal Protection Status Pill Card
         self.status_card = ctk.CTkFrame(self.sidebar_scroll, fg_color=FRAME_BG, corner_radius=8, border_width=1, border_color=BORDER_COLOR)
         self.status_card.pack(fill="x", padx=10, pady=(15, 8))
 
@@ -81,35 +110,6 @@ class CollapsibleSidebar(ctk.CTkFrame):
             text_color=DYNAMIC_GRAY,
             justify="left"
         ).pack(anchor="w", padx=10, pady=(0, 8))
-
-        # 3. Bottom Founder & Credibility Card
-        self.bottom_controls = ctk.CTkFrame(self.sidebar_scroll, fg_color=FRAME_BG, corner_radius=10, border_width=1, border_color=BORDER_COLOR)
-        self.bottom_controls.pack(fill="x", padx=10, pady=(8, 15))
-
-        ctk.CTkLabel(self.bottom_controls, text="Designed & Developed By:", font=ctk.CTkFont(size=11), text_color=DYNAMIC_GRAY).pack(pady=(8, 0))
-        ctk.CTkLabel(self.bottom_controls, text="Master Manikant Yadav", font=ctk.CTkFont(size=13, weight="bold"), text_color=TEXT_COLOR).pack(pady=(2, 4))
-
-        ctk.CTkButton(
-            self.bottom_controls,
-            text="🌐 MasterManikant.com",
-            height=28,
-            fg_color="transparent",
-            border_width=1,
-            border_color=NEON_CYAN,
-            text_color=NEON_CYAN,
-            hover_color="#003344",
-            corner_radius=6,
-            font=ctk.CTkFont(size=11, weight="bold"),
-            cursor="hand2",
-            command=lambda: webbrowser.open("https://mastermanikant.com")
-        ).pack(pady=(2, 6), padx=12, fill="x")
-
-        privacy_text = "100% Local & Privacy-First Architecture"
-        ctk.CTkLabel(self.bottom_controls, text=privacy_text, font=ctk.CTkFont(size=9, slant="italic"), text_color=DYNAMIC_GRAY).pack(pady=(0, 2))
-
-        legal_lbl = ctk.CTkLabel(self.bottom_controls, text="📜 Legal Terms & Privacy Policy", font=ctk.CTkFont(size=10, underline=True), text_color=DYNAMIC_GRAY, cursor="hand2")
-        legal_lbl.pack(pady=(0, 8))
-        legal_lbl.bind("<Button-1>", lambda e: self._show_legal_modal())
 
     def _on_btn_clicked(self, key: str):
         self.current_active_nav = key

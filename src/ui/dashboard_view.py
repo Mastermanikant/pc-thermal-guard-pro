@@ -302,10 +302,6 @@ class DashboardView(ctk.CTkScrollableFrame):
             row = self._create_culprit_row(self.rows_container, i)
             self.culprit_rows.append(row)
 
-        # ── 6. Section: FrankBase Ecosystem & Founder Branding Card (Expandable / Minimizable) ──
-        self.ecosystem_banner = EcosystemBannerCard(self, on_toast_callback=self.on_toast)
-        self.ecosystem_banner.pack(fill="x", padx=10, pady=(6, 15))
-
     def _create_metric_card(self, parent, col, title, value, sub, color):
         card = ctk.CTkFrame(parent, fg_color=BG_COLOR, corner_radius=8, border_width=1, border_color=BORDER_COLOR)
         card.grid(row=0, column=col, padx=4, pady=2, sticky="nsew")

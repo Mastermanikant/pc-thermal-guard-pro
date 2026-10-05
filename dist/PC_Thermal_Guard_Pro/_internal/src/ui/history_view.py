@@ -20,16 +20,24 @@ class HistoryView(ctk.CTkFrame):
         self._build_ui()
 
     def _build_ui(self):
-        # ── 1. Top Section: 5 Multi-Metric Live Telemetry Cards Strip ──
+        # ── 1. Top Section: Responsive Telemetry Metric Cards Grid ──
         self.cards_strip = ctk.CTkFrame(self, fg_color="transparent")
-        self.cards_strip.pack(fill="x", padx=10, pady=(6, 12))
+        self.cards_strip.pack(fill="x", padx=10, pady=(6, 10))
 
-        # 5 Clean Metric Cards with generous padding and vibrant progress bars
-        self.card_cpu_temp = self._create_mini_metric_card(self.cards_strip, "🔥 CPU TEMP", "0.0°C", "#00e5ff")
-        self.card_gpu_temp = self._create_mini_metric_card(self.cards_strip, "🎮 GPU TEMP", "0.0°C", "#10b981")
-        self.card_ram_pct = self._create_mini_metric_card(self.cards_strip, "💾 RAM USAGE", "0%", "#a855f7")
-        self.card_cpu_load = self._create_mini_metric_card(self.cards_strip, "⚡ CPU LOAD", "0%", "#eab308")
-        self.card_power = self._create_mini_metric_card(self.cards_strip, "🔋 POWER / BAT", "100%", "#38bdf8")
+        # Row 1: 3 Main Silicon Metrics (CPU, GPU, RAM)
+        self.row1_strip = ctk.CTkFrame(self.cards_strip, fg_color="transparent")
+        self.row1_strip.pack(fill="x", pady=(0, 6))
+
+        self.card_cpu_temp = self._create_mini_metric_card(self.row1_strip, "🔥 CPU TEMP", "0.0°C", "#00e5ff")
+        self.card_gpu_temp = self._create_mini_metric_card(self.row1_strip, "🎮 GPU TEMP", "0.0°C", "#10b981")
+        self.card_ram_pct = self._create_mini_metric_card(self.row1_strip, "💾 RAM USAGE", "0%", "#a855f7")
+
+        # Row 2: 2 Workload & Power Metrics (CPU Load & Power/Battery - full spacious width, never cuts off)
+        self.row2_strip = ctk.CTkFrame(self.cards_strip, fg_color="transparent")
+        self.row2_strip.pack(fill="x")
+
+        self.card_cpu_load = self._create_mini_metric_card(self.row2_strip, "⚡ CPU LOAD & WATTS", "0%", "#eab308")
+        self.card_power = self._create_mini_metric_card(self.row2_strip, "🔋 POWER SOURCE & BATTERY", "100%", "#38bdf8")
 
         # ── 2. Bottom Section: 7-Day Rolling SQLite Telemetry Ledger ──
         self.log_header = ctk.CTkFrame(self, fg_color="transparent")

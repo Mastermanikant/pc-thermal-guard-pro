@@ -24,6 +24,7 @@ from src.ui.dashboard_view import DashboardView
 from src.ui.history_view import HistoryView
 from src.ui.cooling_settings_view import CoolingSettingsView
 from src.ui.about_view import AboutAndLicenseView
+from src.ui.ecosystem_card import EcosystemBannerCard
 from src.ui.system_tray import SystemTrayManager
 
 logger = get_logger("MainWindow")
@@ -98,11 +99,25 @@ class MainWindow(ctk.CTk):
         )
         self.sidebar.grid(row=1, column=0, sticky="nsew")
 
-        # ── 3. Center Viewport (Row 1, Column 1) ──
-        self.content_container = ctk.CTkFrame(self, fg_color="transparent")
-        self.content_container.grid(row=1, column=1, sticky="nsew", padx=10, pady=10)
+        # ── 3. Center Viewport Area (Row 1, Column 1) ──
+        self.right_main_container = ctk.CTkFrame(self, fg_color="transparent")
+        self.right_main_container.grid(row=1, column=1, sticky="nsew", padx=10, pady=(6, 10))
+        self.right_main_container.grid_rowconfigure(0, weight=1)
+        self.right_main_container.grid_rowconfigure(1, weight=0)
+        self.right_main_container.grid_columnconfigure(0, weight=1)
+
+        # Content Views Container (Scrolls independently in row 0)
+        self.content_container = ctk.CTkFrame(self.right_main_container, fg_color="transparent")
+        self.content_container.grid(row=0, column=0, sticky="nsew")
         self.content_container.grid_rowconfigure(0, weight=1)
         self.content_container.grid_columnconfigure(0, weight=1)
+
+        # Sticky Bottom Ecosystem Banner Card (Stuck in row 1, always visible)
+        self.ecosystem_banner = EcosystemBannerCard(
+            self.right_main_container,
+            on_toast_callback=lambda title, msg: self.show_toast(msg, title=title)
+        )
+        self.ecosystem_banner.grid(row=1, column=0, sticky="ew", pady=(6, 0))
 
         # Instantiate Clean Views
         self.view_dashboard = DashboardView(
@@ -162,6 +177,8 @@ class MainWindow(ctk.CTk):
             self.view_history.apply_theme()
         if hasattr(self.view_cooling, "refresh_theme"):
             self.view_cooling.refresh_theme()
+        if hasattr(self.ecosystem_banner, "refresh_theme"):
+            self.ecosystem_banner.refresh_theme()
 
         self.show_toast(f"Switched to {'Night Mode' if is_dark else 'Day Mode'}", title="Theme Updated")
 
