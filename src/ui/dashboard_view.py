@@ -9,6 +9,7 @@ from typing import Dict, Any, List, Callable
 from src.ui.theme import ThemeManager, NEON_CYAN, NEON_MAGENTA, NEON_GREEN, BG_COLOR, FRAME_BG, BORDER_COLOR, TEXT_COLOR, DYNAMIC_GRAY
 from src.core.thermal_relief import ThermalReliefEngine, purge_all_background_ram
 from src.core.hardware_sensor import restart_as_admin, is_admin
+from src.ui.ecosystem_card import EcosystemBannerCard
 
 class DashboardView(ctk.CTkScrollableFrame):
     def __init__(self, master, on_toast: Callable[[str, str], None] = None, on_cool_down_callback: Callable[[], None] = None, **kwargs):
@@ -300,6 +301,10 @@ class DashboardView(ctk.CTkScrollableFrame):
         for i in range(4):
             row = self._create_culprit_row(self.rows_container, i)
             self.culprit_rows.append(row)
+
+        # ── 6. Section: FrankBase Ecosystem & Founder Branding Card (Expandable / Minimizable) ──
+        self.ecosystem_banner = EcosystemBannerCard(self, on_toast_callback=self.on_toast)
+        self.ecosystem_banner.pack(fill="x", padx=10, pady=(6, 15))
 
     def _create_metric_card(self, parent, col, title, value, sub, color):
         card = ctk.CTkFrame(parent, fg_color=BG_COLOR, corner_radius=8, border_width=1, border_color=BORDER_COLOR)
