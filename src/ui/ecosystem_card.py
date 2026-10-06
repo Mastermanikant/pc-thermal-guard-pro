@@ -19,28 +19,28 @@ class EcosystemBannerCard(ctk.CTkFrame):
             **kwargs
         )
         self.toast = on_toast_callback
-        self.is_minimized = False
+        self.is_minimized = True
 
         self._build_ui()
 
     def _build_ui(self):
         # Header Row: Title on Left, Minimize/Expand Button on Right
         self.header_row = ctk.CTkFrame(self, fg_color="transparent")
-        self.header_row.pack(fill="x", padx=15, pady=(10, 4))
+        self.header_row.pack(fill="x", padx=15, pady=(6, 6))
 
         self.lbl_title = ctk.CTkLabel(
             self.header_row,
             text="✽ FrankBase System Utility Suite",
-            font=ctk.CTkFont(size=13, weight="bold"),
+            font=ctk.CTkFont(size=12, weight="bold"),
             text_color=NEON_CYAN
         )
         self.lbl_title.pack(side="left")
 
         self.btn_toggle_min = ctk.CTkButton(
             self.header_row,
-            text="▼ Minimize",
-            width=90,
-            height=24,
+            text="▶ Expand",
+            width=80,
+            height=22,
             corner_radius=6,
             fg_color="#333333",
             text_color="#ffffff",
@@ -50,9 +50,8 @@ class EcosystemBannerCard(ctk.CTkFrame):
         )
         self.btn_toggle_min.pack(side="right")
 
-        # Body Container
+        # Body Container (Hidden by default because is_minimized=True)
         self.body_frame = ctk.CTkFrame(self, fg_color="transparent")
-        self.body_frame.pack(fill="x", padx=15, pady=(0, 10))
 
         # Row 1: Founder info on Left, "Official Desk" CTA on Right
         row1 = ctk.CTkFrame(self.body_frame, fg_color="transparent")
