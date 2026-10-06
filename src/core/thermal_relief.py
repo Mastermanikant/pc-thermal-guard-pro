@@ -129,8 +129,31 @@ def purge_all_background_ram(culprits: Optional[List[Dict[str, Any]]] = None) ->
     return freed_mb
 
 class ThermalReliefEngine:
+    # 3 Presets Definition
+    PRESETS = {
+        "cool_first": {
+            "name": "❄️ Cool-First (55°C)",
+            "temp": 55.0,
+            "timeout": 60,
+            "desc": "Aggressive cooling at 55°C. Prioritizes whisper-quiet fans and maximum battery longevity."
+        },
+        "balanced": {
+            "name": "⚖️ Balanced (68°C)",
+            "temp": 68.0,
+            "timeout": 45,
+            "desc": "Standard daily mode at 68°C. Perfect harmony between responsiveness and thermals."
+        },
+        "high_performance": {
+            "name": "🚀 High-Performance (78°C)",
+            "temp": 78.0,
+            "timeout": 30,
+            "desc": "Heavy workload mode. Lets CPU run freely up to 78°C before any background throttling."
+        }
+    }
+    active_preset: str = "balanced"
+
     # Configurable Thresholds (Saved to disk)
-    restore_target_temp: float = 55.0      # Target temperature to restore normal priority
+    restore_target_temp: float = 68.0      # Target temperature threshold
     restore_timeout_sec: int = 45          # Maximum time to keep throttled (seconds)
     fan_security_enabled: bool = True       # Enforces 25% stall floor and 75°C emergency override
     emergency_override_temp: float = 75.0  # Temperature that forces 100% fan speed
@@ -159,7 +182,9 @@ class ThermalReliefEngine:
             "ram_reclaimed_mb": round(cls.session_ram_reclaimed_mb, 1),
             "cooling_interventions": cls.session_cooling_interventions,
             "tasks_calmed": cls.session_tasks_calmed,
-            "profile": cls.active_work_profile
+            "profile": cls.active_work_profile,
+            "active_preset": cls.active_preset,
+            "restore_target_temp": cls.restore_target_temp
         }
 
     @classmethod
@@ -168,16 +193,41 @@ class ThermalReliefEngine:
         logger.info(f"Active work profile switched to: {profile_key}")
 
     @classmethod
+    def set_preset(cls, preset_key: str):
+        if preset_key in cls.PRESETS:
+            cls.active_preset = preset_key
+            cfg = cls.PRESETS[preset_key]
+            cls.restore_target_temp = cfg["temp"]
+            cls.restore_timeout_sec = cfg["timeout"]
+            cls.save_config()
+            logger.info(f"Thermal preset switched to {preset_key} ({cfg['temp']}°C)")
+
+    @classmethod
+    def set_custom_threshold(cls, temp: float):
+        cls.restore_target_temp = round(max(50.0, min(85.0, float(temp))), 1)
+        matched = False
+        for k, v in cls.PRESETS.items():
+            if abs(v["temp"] - cls.restore_target_temp) < 0.5:
+                cls.active_preset = k
+                matched = True
+                break
+        if not matched:
+            cls.active_preset = "custom"
+        cls.save_config()
+        logger.info(f"Custom thermal threshold set to {cls.restore_target_temp}°C (preset: {cls.active_preset})")
+
+    @classmethod
     def load_config(cls):
         try:
             if os.path.exists(CONFIG_FILE):
                 with open(CONFIG_FILE, "r", encoding="utf-8") as f:
                     data = json.load(f)
-                    cls.restore_target_temp = float(data.get("restore_target_temp", 55.0))
+                    cls.restore_target_temp = float(data.get("restore_target_temp", 68.0))
                     cls.restore_timeout_sec = int(data.get("restore_timeout_sec", 45))
                     cls.fan_security_enabled = bool(data.get("fan_security_enabled", True))
                     cls.emergency_override_temp = float(data.get("emergency_override_temp", 75.0))
-                    logger.info(f"Loaded thermal config: Target={cls.restore_target_temp}°C, Timeout={cls.restore_timeout_sec}s")
+                    cls.active_preset = data.get("active_preset", "balanced")
+                    logger.info(f"Loaded thermal config: Preset={cls.active_preset}, Target={cls.restore_target_temp}°C")
         except Exception as e:
             logger.error(f"Error loading thermal config: {e}")
 
@@ -192,6 +242,7 @@ class ThermalReliefEngine:
 
         try:
             data = {
+                "active_preset": cls.active_preset,
                 "restore_target_temp": cls.restore_target_temp,
                 "restore_timeout_sec": cls.restore_timeout_sec,
                 "fan_security_enabled": cls.fan_security_enabled,
@@ -200,7 +251,7 @@ class ThermalReliefEngine:
             }
             with open(CONFIG_FILE, "w", encoding="utf-8") as f:
                 json.dump(data, f, indent=2)
-            logger.info(f"Saved thermal config: Target={cls.restore_target_temp}°C, Timeout={cls.restore_timeout_sec}s")
+            logger.info(f"Saved thermal config: Preset={cls.active_preset}, Target={cls.restore_target_temp}°C")
         except Exception as e:
             logger.error(f"Error saving thermal config: {e}")
 
@@ -237,13 +288,12 @@ class ThermalReliefEngine:
                 except Exception:
                     pass
 
-                # Set to IDLE priority
+                # Set to IDLE priority (Windows Background QoS)
                 if hasattr(psutil, "IDLE_PRIORITY_CLASS"):
                     p.nice(psutil.IDLE_PRIORITY_CLASS)
 
-                # Restrict affinity to single core to drop thermal dissipation
-                if hasattr(p, "cpu_affinity"):
-                    p.cpu_affinity([0])
+                # Safe Windows Background QoS: Leave multi-core scheduling to Windows NT Kernel
+                # scheduler to prevent single-core thermal hotspots (no hard single core affinity lock).
 
                 # Flush working set
                 purge_process_working_set(pid)
@@ -310,8 +360,6 @@ class ThermalReliefEngine:
             p = psutil.Process(pid)
             if hasattr(psutil, "NORMAL_PRIORITY_CLASS"):
                 p.nice(psutil.NORMAL_PRIORITY_CLASS)
-            if hasattr(p, "cpu_affinity"):
-                p.cpu_affinity(list(range(psutil.cpu_count() or 4)))
             logger.info(f"Restored process '{info.get('name')}' (PID: {pid}) to Normal priority.")
             return True
         except Exception as e:

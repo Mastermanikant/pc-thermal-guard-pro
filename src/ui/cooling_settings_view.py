@@ -47,6 +47,111 @@ class CoolingSettingsView(ctk.CTkScrollableFrame):
             text_color=DYNAMIC_GRAY
         ).pack(anchor="w", padx=18, pady=(0, 14))
 
+        # <!-- ================= Section: Thermal Relief Presets & Threshold Slider ================= -->
+        preset_card = ctk.CTkFrame(self, fg_color=FRAME_BG, corner_radius=10, border_width=1, border_color=BORDER_COLOR)
+        preset_card.pack(fill="x", padx=15, pady=8)
+
+        preset_hdr = ctk.CTkFrame(preset_card, fg_color="transparent")
+        preset_hdr.pack(fill="x", padx=18, pady=(14, 4))
+
+        ctk.CTkLabel(
+            preset_hdr,
+            text="🎯 Thermal Relief Presets & Auto-Cool Threshold:",
+            font=ctk.CTkFont(size=13, weight="bold"),
+            text_color=TEXT_COLOR
+        ).pack(side="left")
+
+        self.lbl_active_preset_badge = ctk.CTkLabel(
+            preset_hdr,
+            text=f"ACTIVE: {ThermalReliefEngine.active_preset.upper()}",
+            font=ctk.CTkFont(size=10, weight="bold"),
+            fg_color="#003344",
+            text_color=NEON_CYAN,
+            corner_radius=4,
+            padx=8,
+            pady=2
+        )
+        self.lbl_active_preset_badge.pack(side="right")
+
+        ctk.CTkLabel(
+            preset_card,
+            text="Choose an engineered thermal profile or manually adjust the trigger threshold from 50°C to 85°C.\nThrottles background tasks safely via Windows NT IDLE priority without single-core hotspots.",
+            font=ctk.CTkFont(size=11),
+            text_color=DYNAMIC_GRAY,
+            justify="left"
+        ).pack(anchor="w", padx=18, pady=(2, 10))
+
+        # 3 Preset Buttons Grid
+        btn_grid = ctk.CTkFrame(preset_card, fg_color="transparent")
+        btn_grid.pack(fill="x", padx=18, pady=(0, 10))
+        btn_grid.grid_columnconfigure((0, 1, 2), weight=1, uniform="preset")
+
+        self.btn_preset_cool = ctk.CTkButton(
+            btn_grid,
+            text="❄️ Cool-First (55°C)\nBattery & Quiet",
+            height=44,
+            corner_radius=8,
+            font=ctk.CTkFont(size=11, weight="bold"),
+            command=lambda: self._on_preset_clicked("cool_first")
+        )
+        self.btn_preset_cool.grid(row=0, column=0, padx=(0, 4), sticky="ew")
+
+        self.btn_preset_balanced = ctk.CTkButton(
+            btn_grid,
+            text="⚖️ Balanced (68°C)\nDefault Daily Mode",
+            height=44,
+            corner_radius=8,
+            font=ctk.CTkFont(size=11, weight="bold"),
+            command=lambda: self._on_preset_clicked("balanced")
+        )
+        self.btn_preset_balanced.grid(row=0, column=1, padx=4, sticky="ew")
+
+        self.btn_preset_gaming = ctk.CTkButton(
+            btn_grid,
+            text="🚀 High-Perf (78°C)\nGaming & Render",
+            height=44,
+            corner_radius=8,
+            font=ctk.CTkFont(size=11, weight="bold"),
+            command=lambda: self._on_preset_clicked("high_performance")
+        )
+        self.btn_preset_gaming.grid(row=0, column=2, padx=(4, 0), sticky="ew")
+
+        # Interactive Slider Box
+        slider_box = ctk.CTkFrame(preset_card, fg_color=BG_COLOR, corner_radius=8, border_width=1, border_color=BORDER_COLOR)
+        slider_box.pack(fill="x", padx=18, pady=(4, 14))
+
+        slider_top = ctk.CTkFrame(slider_box, fg_color="transparent")
+        slider_top.pack(fill="x", padx=14, pady=(10, 4))
+
+        ctk.CTkLabel(
+            slider_top,
+            text="Custom Trigger Threshold:",
+            font=ctk.CTkFont(size=11, weight="bold"),
+            text_color=TEXT_COLOR
+        ).pack(side="left")
+
+        self.lbl_threshold_val = ctk.CTkLabel(
+            slider_top,
+            text=f"{ThermalReliefEngine.restore_target_temp:.0f}°C",
+            font=ctk.CTkFont(size=14, weight="bold"),
+            text_color=NEON_CYAN
+        )
+        self.lbl_threshold_val.pack(side="right")
+
+        self.slider_threshold = ctk.CTkSlider(
+            slider_box,
+            from_=50.0,
+            to=85.0,
+            number_of_steps=35,
+            progress_color=NEON_CYAN,
+            button_color=NEON_CYAN,
+            command=self._on_slider_moved
+        )
+        self.slider_threshold.set(ThermalReliefEngine.restore_target_temp)
+        self.slider_threshold.pack(fill="x", padx=14, pady=(4, 10))
+
+        self._update_preset_buttons_visual()
+
         # <!-- ================= Section: Windows Auto-Start Toggle Card ================= -->
         startup_card = ctk.CTkFrame(self, fg_color=FRAME_BG, corner_radius=10, border_width=1, border_color=BORDER_COLOR)
         startup_card.pack(fill="x", padx=15, pady=8)
@@ -360,6 +465,47 @@ class CoolingSettingsView(ctk.CTkScrollableFrame):
                     pass
 
         threading.Thread(target=_countdown, daemon=True).start()
+
+    def _update_preset_buttons_visual(self):
+        curr = ThermalReliefEngine.active_preset
+        # Cool-First
+        if curr == "cool_first":
+            self.btn_preset_cool.configure(fg_color=NEON_CYAN, text_color="black")
+        else:
+            self.btn_preset_cool.configure(fg_color="#1e293b", text_color="#cbd5e1")
+
+        # Balanced
+        if curr == "balanced":
+            self.btn_preset_balanced.configure(fg_color=NEON_GREEN, text_color="black")
+        else:
+            self.btn_preset_balanced.configure(fg_color="#1e293b", text_color="#cbd5e1")
+
+        # High-Performance
+        if curr == "high_performance":
+            self.btn_preset_gaming.configure(fg_color=NEON_MAGENTA, text_color="white")
+        else:
+            self.btn_preset_gaming.configure(fg_color="#1e293b", text_color="#cbd5e1")
+
+        self.lbl_active_preset_badge.configure(text=f"ACTIVE: {curr.upper()}")
+        self.lbl_threshold_val.configure(text=f"{ThermalReliefEngine.restore_target_temp:.0f}°C")
+        self.slider_threshold.set(ThermalReliefEngine.restore_target_temp)
+
+    def _on_preset_clicked(self, preset_key: str):
+        ThermalReliefEngine.set_preset(preset_key)
+        self._update_preset_buttons_visual()
+        cfg = ThermalReliefEngine.PRESETS[preset_key]
+        if self.toast:
+            self.toast(f"🎯 Switched to {cfg['name']}: {cfg['desc']}")
+
+    def _on_slider_moved(self, val: float):
+        temp = round(val, 1)
+        self.lbl_threshold_val.configure(text=f"{temp:.0f}°C")
+        ThermalReliefEngine.set_custom_threshold(temp)
+        curr = ThermalReliefEngine.active_preset
+        self.lbl_active_preset_badge.configure(text=f"ACTIVE: {curr.upper()}")
+        self.btn_preset_cool.configure(fg_color=NEON_CYAN if curr == "cool_first" else "#1e293b", text_color="black" if curr == "cool_first" else "#cbd5e1")
+        self.btn_preset_balanced.configure(fg_color=NEON_GREEN if curr == "balanced" else "#1e293b", text_color="black" if curr == "balanced" else "#cbd5e1")
+        self.btn_preset_gaming.configure(fg_color=NEON_MAGENTA if curr == "high_performance" else "#1e293b", text_color="white" if curr == "high_performance" else "#cbd5e1")
 
     def refresh_theme(self):
         self.configure(fg_color=BG_COLOR)

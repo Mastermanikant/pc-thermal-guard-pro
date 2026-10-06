@@ -371,14 +371,17 @@ class DashboardView(ctk.CTkScrollableFrame):
             hint = "💡 Multitasking Mode: Maximum tolerance for background downloads, music and cloud syncs."
         elif "Game" in val or "Studio" in val:
             profile_key = "gaming"
-            hint = "💡 Game / Studio Focus: Directs 100% compute to active window. Silences background updaters."
+            hint = "💡 Game / Studio Focus (78°C limit): Directs 100% compute to active window. Hardware runs unthrottled."
+            ThermalReliefEngine.set_preset("high_performance")
             ThermalReliefEngine.apply_cooling_mode("deep", self.top_culprits_cache)
         elif "Eco" in val or "Battery" in val:
             profile_key = "eco"
-            hint = "💡 Eco Mode: Actively minimizes background CPU wakeups to conserve battery and reduce heat."
+            hint = "💡 Eco / Cool-First (55°C): Minimizes background CPU wakeups to conserve battery & keep fans quiet."
+            ThermalReliefEngine.set_preset("cool_first")
         else:
             profile_key = "auto"
-            hint = "💡 Auto-Pilot: Intelligently steps in only during actual heat bursts. Never disturbs your active work."
+            hint = "💡 Auto-Pilot (Balanced 68°C): Intelligently steps in only during actual heat bursts without disturbing work."
+            ThermalReliefEngine.set_preset("balanced")
 
         self.lbl_profile_hint.configure(text=hint)
         ThermalReliefEngine.set_work_profile(profile_key)
