@@ -49,3 +49,29 @@ def set_autostart(enabled: bool) -> bool:
     except Exception as e:
         logger.error(f"Error setting autostart registry: {e}")
         return False
+
+def register_protocol_handler() -> bool:
+    """Registers pcthermalguard:// URL protocol in Windows HKCU registry for smooth 1-click web-to-app flow."""
+    try:
+        if getattr(sys, "frozen", False):
+            exe_path = sys.executable
+        else:
+            exe_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "main.py"))
+            exe_path = f'"{sys.executable}" "{exe_path}"'
+
+        cmd = f'"{exe_path}" "%1"'
+        key_path = r"Software\Classes\pcthermalguard"
+
+        with winreg.CreateKey(winreg.HKEY_CURRENT_USER, key_path) as key:
+            winreg.SetValueEx(key, "", 0, winreg.REG_SZ, "URL:PC Thermal Guard Protocol")
+            winreg.SetValueEx(key, "URL Protocol", 0, winreg.REG_SZ, "")
+
+        with winreg.CreateKey(winreg.HKEY_CURRENT_USER, key_path + r"\shell\open\command") as key:
+            winreg.SetValueEx(key, "", 0, winreg.REG_SZ, cmd)
+
+        logger.info("pcthermalguard:// URL protocol successfully registered in HKCU.")
+        return True
+    except Exception as e:
+        logger.warning(f"Could not register pcthermalguard protocol: {e}")
+        return False
+

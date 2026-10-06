@@ -377,6 +377,19 @@ class MainWindow(ctk.CTk):
         except Exception as e:
             logger.error(f"Error restoring from tray: {e}")
 
+    def _on_protocol_activation(self, key: str):
+        """Called when pcthermalguard:// URI protocol passes a generated key."""
+        try:
+            self._do_restore_from_tray()
+            self._on_navigation_change("License")
+            if hasattr(self, "view_about") and hasattr(self.view_about, "entry_key"):
+                self.view_about.entry_key.delete(0, "end")
+                self.view_about.entry_key.insert(0, key.strip())
+                self.show_toast(f"🔑 Secret Key Received from Website!")
+                self.view_about._on_activate_license()
+        except Exception as e:
+            logger.error(f"Error handling protocol activation: {e}")
+
     def exit_app(self):
         self.after(0, self._do_exit_app)
 

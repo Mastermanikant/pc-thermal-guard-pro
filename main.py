@@ -36,8 +36,25 @@ def main():
     # Execute silent startup hygiene sweep (Cleans stale temp & RAM working set)
     SafeSystemCleaner.execute_startup_hygiene_sweep()
 
+    from src.core.autostart import register_protocol_handler
+    register_protocol_handler()
+
     # Launch GUI Controller
     app = MainWindow(sensor_engine=sensor_engine, history_manager=history_manager)
+
+    # Check for URI activation protocol or arguments
+    for arg in sys.argv[1:]:
+        if arg.startswith("pcthermalguard://"):
+            try:
+                from urllib.parse import urlparse, parse_qs
+                parsed = urlparse(arg)
+                params = parse_qs(parsed.query)
+                key_param = params.get("key", [""])[0]
+                if key_param:
+                    app.after(500, lambda k=key_param: app._on_protocol_activation(k))
+            except Exception:
+                pass
+
     if "--minimized" in sys.argv or "--tray" in sys.argv:
         app.after(100, app.minimize_to_tray)
     app.mainloop()
