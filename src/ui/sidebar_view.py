@@ -131,14 +131,8 @@ class CollapsibleSidebar(ctk.CTkFrame):
                 )
 
     def _show_legal_modal(self):
-        msg = (
-            "FrankBase Legal Terms & Privacy Commitment:\n\n"
-            "• Zero Telemetry: No hardware metrics, logs, or personal data ever leave your PC.\n"
-            "• Read-Only Sensors: Safe hardware polling without BIOS alterations.\n"
-            "• Machine ID Licensing: 100% offline verification on this machine.\n\n"
-            "Official Website: mastermanikant.com"
-        )
-        show_custom_dialog(self.winfo_toplevel(), "Legal Terms & Privacy", msg, icon="📜", link_url="https://mastermanikant.com/privacy")
+        from src.ui.legal_modal import show_legal_privacy_modal
+        show_legal_privacy_modal(self.winfo_toplevel())
 
     def refresh_theme(self):
         self.configure(fg_color=SIDEBAR_BG)
