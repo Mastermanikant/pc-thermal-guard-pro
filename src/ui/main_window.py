@@ -35,7 +35,7 @@ class MainWindow(ctk.CTk):
         logger.info("Initializing PC Thermal Guard Pro MainWindow...")
 
         # Window Configuration (1160x760)
-        self.title("Frank Base - PC Thermal Guard Pro")
+        self.title("")
         self.geometry("1160x760")
         self.minsize(940, 660)
 

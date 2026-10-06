@@ -76,7 +76,7 @@ class AboutAndLicenseView(ctk.CTkScrollableFrame):
             wraplength=660
         ).pack(anchor="w", padx=18, pady=(4, 10))
 
-        # 1-Click 30-Day Beta Key Generation Row
+        # Web Key Generation CTA Row (Direct Web Link with pre-filled Device ID)
         row_quick_beta = ctk.CTkFrame(card_license, fg_color=BG_COLOR, corner_radius=8, border_width=1, border_color=BORDER_COLOR)
         row_quick_beta.pack(fill="x", padx=18, pady=(0, 10))
 
@@ -88,7 +88,7 @@ class AboutAndLicenseView(ctk.CTkScrollableFrame):
 
         ctk.CTkLabel(
             beta_text_box,
-            text="🎁 30-Day Free Community Beta Trial Key",
+            text="🌐 Generate 30-Day Free Key on Website (Zero Information Required)",
             font=ctk.CTkFont(size=12, weight="bold"),
             text_color=NEON_CYAN,
             anchor="w"
@@ -96,7 +96,7 @@ class AboutAndLicenseView(ctk.CTkScrollableFrame):
 
         ctk.CTkLabel(
             beta_text_box,
-            text="Instantly generates a machine-bound beta trial key and unlocks full thermal protection on this PC.",
+            text="Click below: Opens portal with your Device ID pre-filled. Click 'Generate' to auto-copy key, then paste it here.",
             font=ctk.CTkFont(size=10),
             text_color=DYNAMIC_GRAY,
             anchor="w"
@@ -104,14 +104,14 @@ class AboutAndLicenseView(ctk.CTkScrollableFrame):
 
         btn_auto_beta = ctk.CTkButton(
             beta_inner,
-            text="⚡ 1-Click Activate 30-Day Beta",
+            text="🔑 Get Free 30-Day Key Online ↗",
             font=ctk.CTkFont(size=11, weight="bold"),
             fg_color=NEON_MAGENTA,
             hover_color="#c00060",
             text_color="white",
             corner_radius=6,
             height=34,
-            command=self._on_auto_activate_beta
+            command=self._open_web_key_generator
         )
         btn_auto_beta.pack(side="right", padx=(10, 0))
 
@@ -338,23 +338,15 @@ class AboutAndLicenseView(ctk.CTkScrollableFrame):
             command=lambda: webbrowser.open("https://store.frankbase.com")
         ).pack(side="left", expand=True, fill="x", padx=(4, 0))
 
-    def _on_auto_activate_beta(self):
-        """Generates machine-bound beta key, pre-fills entry, and activates with 1-click."""
-        beta_key = self.license_mgr.generate_beta_trial_key()
-        self.entry_key.delete(0, "end")
-        self.entry_key.insert(0, beta_key)
-        success, msg = self.license_mgr.activate_license(beta_key)
-        if success:
-            self.lbl_tier.configure(
-                text=f"{self.license_mgr.get_license_tier_name()}",
-                text_color=NEON_GREEN,
-                fg_color="#003311"
-            )
-            if self.toast:
-                self.toast("🎉 30-Day Free Beta Activated Successfully!")
-        else:
-            if self.toast:
-                self.toast(f"⚠️ {msg}")
+    def _open_web_key_generator(self):
+        """Opens official web portal with Device ID automatically passed in URL."""
+        url = f"https://store.frankbase.com/pc-thermal-guard-pro-trial?device_id={self.hwid}"
+        try:
+            webbrowser.open(url)
+        except Exception:
+            pass
+        if self.toast:
+            self.toast("🌐 Opening key generator with your Device ID...")
 
     def _on_copy_hwid(self):
         copy_machine_id_to_clipboard()

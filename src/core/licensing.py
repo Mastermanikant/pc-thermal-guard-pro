@@ -105,15 +105,22 @@ class LicenseManager:
 
     def get_status_badge_text(self) -> str:
         if self.is_pro_active():
-            return "⭐ Pro Lifetime Edition (Active)"
+            tier = self._state.get("tier", "")
+            if "Lifetime" in tier:
+                return "⭐ Pro Lifetime Edition (Active)"
+            days_left = self.get_beta_days_left()
+            return f"⭐ 30-Day Pro Active ({days_left} Days Left)" if days_left > 0 else "⭐ 30-Day Pro Active"
         days_left = self.get_beta_days_left()
         if days_left > 0:
-            return f"🛡️ 30-Day Beta ({days_left} Days Left)"
+            return f"🛡️ 30-Day Free Beta ({days_left} Days Left)"
         return "⚠️ Beta Trial Expired"
 
     def get_license_tier_name(self) -> str:
         if self.is_pro_active():
-            return "Pro Lifetime Edition"
+            tier = self._state.get("tier", "")
+            if "Lifetime" in tier:
+                return "Pro Lifetime Edition"
+            return "30-Day Pro Community Edition"
         days_left = self.get_beta_days_left()
         if days_left > 0:
             return f"Community Beta Trial ({days_left} Days Left)"
@@ -141,10 +148,10 @@ class LicenseManager:
 
         hwid_clean = self.hwid.replace("FB-PC-", "").replace("-", "").upper()
 
-        # Format 1: 30-Day Beta Trial Key format: FB-BETA-30D-<HWID_PART>-XXXX
-        if "BETA" in key_clean:
+        # Format 1: 30-Day Beta / Free Pro Trial Key format: FB-PRO-30DAY-<HWID_PART>-PASS or FB-BETA-30D-<HWID_PART>-XXXX
+        if "BETA" in key_clean or "30DAY" in key_clean:
             if hwid_clean[:4] in key_clean or hwid_clean in key_clean or len(key_clean) >= 12:
-                return True, "Valid 30-Day Community Beta Trial Key."
+                return True, "Valid 30-Day Community Pro Trial Key."
 
         # Format 2: Machine-bound Pro Key format: FB-PRO-<HWID_PART>-XXXX or FB-PRO-1YR-<HWID_PART>-XXXX
         if key_clean.startswith("FB-PRO-") or key_clean.startswith("FB-1YR-"):
@@ -173,14 +180,14 @@ class LicenseManager:
     def activate_license(self, key_string: str) -> Tuple[bool, str]:
         valid, msg = self.verify_license_key(key_string)
         if valid:
-            is_beta = "BETA" in key_string.upper()
-            tier_name = "Community Beta Pro Edition" if is_beta else "Pro Lifetime Edition"
+            is_30day = "BETA" in key_string.upper() or "30DAY" in key_string.upper()
+            tier_name = "30-Day Pro Community Edition" if is_30day else "Pro Lifetime Edition"
             self._state = {
                 "tier": tier_name,
                 "is_pro": True,
                 "license_key": key_string.strip().upper(),
                 "activated_at": time.strftime("%Y-%m-%d %H:%M:%S"),
-                "first_run_time": self.get_first_run_time(),
+                "first_run_time": time.time(),
                 "hwid": self.hwid
             }
             try:
