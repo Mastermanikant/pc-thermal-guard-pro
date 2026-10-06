@@ -27,17 +27,20 @@ class EcosystemBannerCard(ctk.CTkFrame):
         self._build_ui()
 
     def _build_ui(self):
-        # Header Row: Title on Left, Minimize/Expand Button on Right
-        self.header_row = ctk.CTkFrame(self, fg_color="transparent")
+        # Header Row: Clickable everywhere to Toggle Expand/Minimize
+        self.header_row = ctk.CTkFrame(self, fg_color="transparent", cursor="hand2")
         self.header_row.pack(fill="x", padx=15, pady=(6, 6))
+        self.header_row.bind("<Button-1>", lambda e: self.toggle_minimize())
 
         self.lbl_title = ctk.CTkLabel(
             self.header_row,
-            text="✽ FrankBase System Utility Suite",
+            text="✽ Frank Base System Utility Suite",
             font=ctk.CTkFont(size=12, weight="bold"),
-            text_color=NEON_CYAN
+            text_color=NEON_CYAN,
+            cursor="hand2"
         )
         self.lbl_title.pack(side="left")
+        self.lbl_title.bind("<Button-1>", lambda e: self.toggle_minimize())
 
         self.btn_toggle_min = ctk.CTkButton(
             self.header_row,
@@ -49,6 +52,7 @@ class EcosystemBannerCard(ctk.CTkFrame):
             text_color="#ffffff",
             hover_color="#444444",
             font=ctk.CTkFont(size=10, weight="bold"),
+            cursor="hand2",
             command=self.toggle_minimize
         )
         self.btn_toggle_min.pack(side="right")

@@ -44,11 +44,19 @@ class TopCollapsibleHeader(ctk.CTkFrame):
 
         self.lbl_brand_main = ctk.CTkLabel(
             brand_box,
-            text="FRANKBASE",
+            text="FRANK BASE",
             font=ctk.CTkFont(size=20, weight="bold"),
             text_color=NEON_CYAN
         )
         self.lbl_brand_main.pack(anchor="w")
+
+        self.lbl_brand_sub = ctk.CTkLabel(
+            brand_box,
+            text="PC Thermal Guard Pro",
+            font=ctk.CTkFont(size=11, weight="bold"),
+            text_color=TEXT_COLOR
+        )
+        self.lbl_brand_sub.pack(anchor="w")
 
         # 2. Plan / 30-Day Beta Status Badge
         badge_text = self.license_mgr.get_status_badge_text()
