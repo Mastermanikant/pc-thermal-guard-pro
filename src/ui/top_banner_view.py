@@ -50,14 +50,6 @@ class TopCollapsibleHeader(ctk.CTkFrame):
         )
         self.lbl_brand_main.pack(anchor="w")
 
-        self.lbl_brand_sub = ctk.CTkLabel(
-            brand_box,
-            text="PC Thermal Guard Pro",
-            font=ctk.CTkFont(size=11, weight="bold"),
-            text_color=TEXT_COLOR
-        )
-        self.lbl_brand_sub.pack(anchor="w")
-
         # 2. Plan / 30-Day Beta Status Badge
         badge_text = self.license_mgr.get_status_badge_text()
         badge_color = "#059669" if self.license_mgr.is_pro_active() else NEON_MAGENTA
@@ -106,7 +98,6 @@ class TopCollapsibleHeader(ctk.CTkFrame):
         is_dark = ThemeManager.get_current_theme() == "dark"
         self.configure(fg_color=FRAME_BG, border_color=BORDER_COLOR)
         self.lbl_brand_main.configure(text_color=NEON_CYAN)
-        self.lbl_brand_sub.configure(text_color=TEXT_COLOR)
         self.theme_box.configure(fg_color=BG_COLOR, border_color=BORDER_COLOR)
         self.sw_theme.configure(text="🌙 Night Mode" if is_dark else "☀️ Day Mode")
         self.btn_plan_badge.configure(

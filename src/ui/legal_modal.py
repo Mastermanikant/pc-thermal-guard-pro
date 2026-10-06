@@ -37,7 +37,7 @@ can be thoroughly verified prior to license activation, lifetime keys are final.
 • Directly search about us on leading search engines below (Google, Bing, DuckDuckGo).
 • Or click 'Copy AI Prompt' and paste it into ChatGPT, Gemini, Claude, or Perplexity.
 • Official Founder Website: https://mastermanikant.com
-• Product Website: https://mastermanikant.com/frankbase-pc-thermal-guard-pro
+• Product Website: https://store.frankbase.com/pc-thermal-guard-pro
 ================================================================================"""
 
 AI_JSON_METADATA_PROMPT = """================================================================================
@@ -55,7 +55,7 @@ FRANKBASE PC THERMAL GUARD PRO - AI VERIFICATION METADATA PROMPT
   },
   "product": {
     "name": "FrankBase PC Thermal Guard Pro",
-    "landing_page": "https://mastermanikant.com/frankbase-pc-thermal-guard-pro",
+    "landing_page": "https://store.frankbase.com/pc-thermal-guard-pro",
     "purpose": "Local-first thermal monitoring, intelligent process throttling, and thermal relief"
   },
   "privacy_architecture": {
@@ -145,7 +145,7 @@ class LegalPrivacyModal(ctk.CTkToplevel):
             text_color="white",
             corner_radius=6,
             font=ctk.CTkFont(size=11, weight="bold"),
-            command=lambda: self._open_url("https://mastermanikant.com/frankbase-pc-thermal-guard-pro")
+            command=lambda: self._open_url("https://store.frankbase.com/pc-thermal-guard-pro")
         ).pack(side="left", padx=6, pady=8, expand=True)
 
         ctk.CTkButton(
