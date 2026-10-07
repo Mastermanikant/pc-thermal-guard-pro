@@ -26,7 +26,9 @@ CRITICAL_SYSTEM_PROCESSES = {
     'lsass.exe', 'svchost.exe', 'fontdrvhost.exe', 'dwm.exe', 'memory compression',
     'explorer.exe', 'sihost.exe', 'taskhostw.exe', 'ctfmon.exe', 'searchhost.exe',
     'startmenuexperiencehost.exe', 'shellexperiencehost.exe', 'runtimebroker.exe',
-    'spoolsv.exe', 'audiodg.exe', 'antigravity.exe'
+    'spoolsv.exe', 'audiodg.exe', 'antigravity.exe', 'python.exe', 'pythonw.exe',
+    'code.exe', 'node.exe', 'powershell.exe', 'cmd.exe', 'conhost.exe',
+    'windowsterminal.exe', 'git.exe', 'bash.exe'
 }
 
 BROWSER_PROCESS_NAMES = {
@@ -437,13 +439,20 @@ class ThermalReliefEngine:
     @classmethod
     def execute_advance_clean_slate(cls) -> Dict[str, Any]:
         """
-        Advance Performance Launchpad (Clean Slate Mode):
-        Closes non-essential background user applications (browsers, updaters, discord, media players)
-        and purges RAM to dedicate 100% hardware power for gaming / video editing suites.
+        Advance Performance Launchpad (Safe Game & Studio Mode):
+        Safely calms background updater bloat, lowers background thread priority to IDLE,
+        and purges RAM working sets. NEVER terminates user applications, IDEs, or Antigravity!
         """
         own_pid = os.getpid()
-        closed_names = []
-        target_pids = []
+        fg_pid = get_foreground_process_id()
+        calmed_names = []
+        calmed_pids = []
+
+        # Pure background updater services that can be safely closed or idled
+        KNOWN_DISPENSABLE_UPDATERS = {
+            'googleupdate.exe', 'microsoftedgeupdate.exe', 'onedrive.exe',
+            'dropboxupdate.exe', 'adobearm.exe', 'jusched.exe'
+        }
 
         for proc in psutil.process_iter(['pid', 'name']):
             try:
@@ -451,20 +460,34 @@ class ThermalReliefEngine:
                 pid = info.get('pid', 0)
                 name = (info.get('name') or '').lower()
 
-                if pid <= 4 or pid == own_pid:
+                # Guard 1: Never touch self, system, foreground active app, or dev/Antigravity processes
+                if pid <= 4 or pid == own_pid or (fg_pid and pid == fg_pid):
                     continue
-                if name in CRITICAL_SYSTEM_PROCESSES or 'pc_thermal_guard_pro' in name:
+                if name in CRITICAL_SYSTEM_PROCESSES or 'pc_thermal_guard_pro' in name or 'antigravity' in name:
                     continue
 
-                try:
-                    p = psutil.Process(pid)
-                    p.terminate()
-                    target_pids.append(pid)
-                    raw_name = info.get('name')
-                    if raw_name and raw_name not in closed_names:
-                        closed_names.append(raw_name)
-                except Exception:
-                    pass
+                # Guard 2: Only close pure dispensable updater binaries, NEVER user editors or IDEs
+                if name in KNOWN_DISPENSABLE_UPDATERS:
+                    try:
+                        p = psutil.Process(pid)
+                        p.terminate()
+                        calmed_pids.append(pid)
+                        if info.get('name') and info.get('name') not in calmed_names:
+                            calmed_names.append(info.get('name'))
+                    except Exception:
+                        pass
+                else:
+                    # For all other background software: Throttle to Idle priority without killing
+                    try:
+                        p = psutil.Process(pid)
+                        if hasattr(psutil, "IDLE_PRIORITY_CLASS"):
+                            p.nice(psutil.IDLE_PRIORITY_CLASS)
+                        purge_process_working_set(pid)
+                        calmed_pids.append(pid)
+                        if info.get('name') and len(calmed_names) < 4 and info.get('name') not in calmed_names:
+                            calmed_names.append(info.get('name'))
+                    except Exception:
+                        pass
             except (psutil.NoSuchProcess, psutil.AccessDenied):
                 continue
 
@@ -474,14 +497,14 @@ class ThermalReliefEngine:
         # Track genuine cumulative session savings
         cls.session_ram_reclaimed_mb += freed_mb
         cls.session_cooling_interventions += 1
-        cls.session_tasks_calmed += len(target_pids)
+        cls.session_tasks_calmed += len(calmed_pids)
 
-        msg = f"🚀 Advance Launchpad Engaged: Cleaned {len(target_pids)} background processes ({', '.join(closed_names[:3]) if closed_names else 'Zero bloat'}) and reclaimed ~{freed_mb:.0f} MB RAM. 100% CPU is ready for your game/editor!"
+        msg = f"🚀 Advance Launchpad Engaged: Calmed {len(calmed_pids)} background processes ({', '.join(calmed_names[:3]) if calmed_names else 'Zero bloat'}) and reclaimed ~{freed_mb:.0f} MB RAM. 100% compute is ready for your game/editor!"
         logger.info(msg)
         return {
             "success": True,
-            "closed_count": len(target_pids),
-            "closed_names": closed_names,
+            "closed_count": len(calmed_pids),
+            "closed_names": calmed_names,
             "ram_freed_mb": freed_mb,
             "message": msg
         }

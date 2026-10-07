@@ -262,7 +262,7 @@ class CoolingSettingsView(ctk.CTkScrollableFrame):
 
         ctk.CTkLabel(
             launch_card,
-            text="Closes non-essential background user applications (browsers, updaters, discord, torrents) and flushes RAM to dedicate 100% CPU & memory power to your upcoming heavy Game or Video Editing suite.",
+            text="Calms background updaters and dormant threads to IDLE priority and flushes cached RAM to dedicate 100% CPU & memory power to your upcoming heavy Game or Video Editing suite. Active work and developer tools are 100% protected.",
             font=ctk.CTkFont(size=11),
             text_color="#cbd5e1",
             justify="left",
@@ -391,7 +391,7 @@ class CoolingSettingsView(ctk.CTkScrollableFrame):
 
         ctk.CTkLabel(
             top,
-            text="Warning: This will gracefully close background browsers, updaters,\nand user apps to free 100% CPU & RAM for your game/editor.",
+            text="Calms background updaters and threads to IDLE priority and flushes RAM.\nYour active work, coding IDEs, and foreground apps are 100% protected.",
             font=ctk.CTkFont(size=11),
             text_color="#94a3b8",
             justify="center"
